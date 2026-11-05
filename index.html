@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1238d4"><meta name="description" content="2026 팔레트 전국 오락실 — 성남청소년, 파란바다, 희망스쿨, 대광, 전주동산지역아동센터의 창작 게임을 만나보세요.">
+<title>2026 팔레트 전국 오락실</title><link rel="icon" type="image/png" href="assets/palette-logo.png"><link rel="stylesheet" href="styles.css?v=12"><script src="games.js?v=2" defer></script><script src="app.js?v=8" defer></script>
+</head><body>
+<a class="skip" href="#arcade">게임 선택으로 바로가기</a>
+<header class="header wrap"><h1 class="site-title"><img src="assets/arcade-title.png?v=11" alt="2026 팔레트 전국 오락실" width="2172" height="724" fetchpriority="high" decoding="async"></h1><p class="site-intro">전국 지역아동센터 팔레트 크리에이터들이 6주간 창작 세계를 탐험하며<br>바이브 코딩으로 만든 웹 게임들 중 대표 게임들을 모아봤어요.</p></header>
+<main id="arcade" class="arcade wrap" aria-label="지역아동센터별 게임">
+<div class="arcade-layout"><div class="map-column"><div class="map-stage"><img class="korea-map" src="assets/korea-map.svg?v=9" alt="남한 지도" width="690" height="650"><div id="map-markers"></div></div></div><section class="feature" id="feature" aria-live="polite" aria-label="선택한 센터의 게임"></section></div>
+</main>
+<footer class="site-copyright wrap"><div class="partner-logos" aria-label="스마일게이트 희망스튜디오와 팔레트"><img class="foundation-logo" src="assets/hope-studio-logo-white.png" alt="스마일게이트 희망스튜디오" width="519" height="195"><span class="logo-divider" aria-hidden="true"></span><img class="palette-logo" src="assets/palette-logo.png" alt="팔레트" width="1472" height="698"></div><strong>© Smilegate. All Rights Reserved.</strong><p class="copyright-meta">작성일 : 2026년 11월 5일 &nbsp; 작성부서 : CSR기획팀 &nbsp; 작성자 : 이시현 인턴</p><p>※ 본 문서는 (주)스마일게이트의 자산으로 저작권은 스마일게이트에 있으며, 임의로 복사되거나 배포 될 수 없습니다.</p><p lang="en">※ This document is the Smilegate Group rights to the assets of the Smilegate, and can not be arbitrarily copied or distributed.</p></footer>
+<dialog id="player" class="player" aria-labelledby="player-title"><div id="player-shell" class="player-shell"><header class="player-top"><div><span id="player-center"></span><h2 id="player-title"></h2></div><div class="player-actions"><button id="restart" type="button" title="처음부터 다시 열기">↻ <span>다시 시작</span></button><button id="fullscreen" type="button" title="전체 화면">⛶ <span>전체 화면</span></button><button id="close-player" type="button" title="게임 닫기">✕ <span>나가기</span></button></div></header><div class="viewport" id="viewport"><div class="load-state" id="load-state" role="status"><span class="loader"></span><b id="load-message">게임을 준비하고 있어요</b><p id="load-detail">잠시만 기다려 주세요.</p><button type="button" id="retry" hidden>다시 불러오기</button><a id="direct-play" target="_blank" rel="noopener" hidden>새 탭에서 열기 ↗</a></div></div><div class="player-bottom"><p id="controls"></p><span>나가기 · Shift+Esc</span></div><p id="compatibility" class="compatibility" hidden></p></div></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+</body></html>
