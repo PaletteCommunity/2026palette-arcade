@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<script src="../game-bridge.js?v=2"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rolling Headset Adventure - High Visual Edition</title>
+    <!-- Tailwind CSS for UI styling -->
+    <link rel="stylesheet" href="../vendor/game-ui.css">
+    <!-- Three.js Library for 3D Graphics -->
+    <script src="../vendor/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background: #030712;
+            user-select: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        /* Glassmorphism UI overlays */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+        }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.85; transform: scale(1); filter: drop-shadow(0 0 15px rgba(52,211,153,0.6)); }
+            50% { opacity: 1; transform: scale(1.06); filter: drop-shadow(0 0 25px rgba(52,211,153,0.9)); }
+        }
+        .animate-glow {
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay: Start Screen -->
+    <div id="start-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/85 z-20 text-white px-4">
+        <div class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border border-emerald-500/30">
+            <div class="inline-block p-4 rounded-2xl bg-emerald-500/20 text-emerald-400 mb-4 animate-glow">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <h1 class="text-3xl font-black tracking-wider mb-2 bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">ROLLING HEADSET</h1>
+            <p class="text-slate-300 text-sm mb-6 leading-relaxed">
+                시네마틱 그래픽과 함께하는 환상의 초원 무한 질주!<br>
+                <span class="text-emerald-400 font-semibold">초록색 길</span>을 사수하고, 장애물과 낙뢰를 피하세요.<br>
+                <span class="text-cyan-400 font-semibold">100칸 마다 등장하는 특수 아이템</span>을 획득할 수 있습니다!
+            </p>
+            <div class="bg-slate-900/80 p-4 rounded-xl mb-6 text-xs text-slate-300 border border-slate-800 text-left">
+                <p class="font-bold text-emerald-400 mb-1">🎮 조작법 (왼쪽 키 = 왼쪽 이동)</p>
+                <p><b>← 방향키</b>: 왼쪽으로 이동 | <b>→ 방향키</b>: 오른쪽으로 이동</p>
+                <p class="mt-2 text-amber-300"><b>✨ 아이템 종류 (100칸 마다 스폰):</b><br>
+                🛡️ 방어막 (1회 피격 방어) | 🪞 피격 범위 축소 (10초) | ⏳ 속도 감소 (10초)</p>
+            </div>
+            <button onclick="startGame()" class="w-full py-4 px-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-emerald-500/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-lg">
+                게임 시작하기
+            </button>
+        </div>
+    </div>
+
+    <!-- UI Overlay: HUD (In-Game) -->
+    <div id="hud" class="absolute top-6 left-6 right-6 flex justify-between items-start z-10 pointer-events-none hidden">
+        <div class="flex flex-col gap-2">
+            <div class="glass-panel px-5 py-3 rounded-2xl flex items-center gap-3 text-white">
+                <span class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_#34d399]"></span>
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">무한 진행도</span>
+                <span id="progress-text" class="text-lg font-bold font-mono">0 칸</span>
+            </div>
+            <!-- Active Status Effects Display -->
+            <div id="status-effects" class="flex gap-2"></div>
+        </div>
+        <div class="glass-panel px-6 py-3 rounded-2xl flex items-center gap-3 text-white shadow-lg border-amber-500/30">
+            <span class="text-sm font-semibold text-amber-300/80 uppercase tracking-wider">점수</span>
+            <span id="score-text" class="text-2xl font-black font-mono text-amber-400">0</span>
+        </div>
+    </div>
+
+    <!-- UI Overlay: Game Over Screen -->
+    <div id="gameover-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-rose-950/85 z-20 text-white px-4 hidden">
+        <div class="glass-panel p-8 rounded-3xl max-w-sm w-full text-center border border-rose-500/30">
+            <div class="inline-block p-4 rounded-2xl bg-rose-500/20 text-rose-400 mb-4 animate-bounce">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-black mb-2 text-rose-400">게임 오버</h2>
+            <p id="gameover-reason" class="text-slate-300 text-sm mb-4">위험 요소에 닿았습니다!</p>
+            <div class="bg-slate-900/80 p-3 rounded-xl mb-6 text-sm text-slate-300 border border-slate-800">
+                최종 점수: <span id="final-score" class="font-bold text-amber-400 font-mono text-lg">0</span> 점
+            </div>
+            <button onclick="restartGame()" class="w-full py-4 px-6 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-white font-extrabold rounded-2xl shadow-lg shadow-rose-500/40 transition-all transform hover:-translate-y-0.5 text-lg">
+                다시 도전하기
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Game Logic script -->
+    <script>
+        let scene, camera, renderer;
+        let player;
+        let gameState = 'START'; // START, PLAYING, GAMEOVER
+        let currentZ = 0;
+        let playerX = 0; // -3 to 3 lane bounds
+        const baseSpeed = 18.0; // High speed arcade feel
+        let score = 0;
+        
+        // Input control
+        const keys = { left: false, right: false };
+        const playerSpeedX = 7.0; // Smooth steering speed
+
+        // Map generation arrays
+        let tiles = [];
+        let obstacles = []; // Golden pillars
+        let items = []; // Special items every 100 tiles
+        let lightnings = []; // Active lethal lightning strikes
+        let activeWarnings = []; // Warning markers on ground
+        let lastGeneratedTile = 0;
+        let particleSystem;
+
+        // Player power-ups / status
+        let hasShield = false;
+        let effectTimers = {
+            shrink: 0,
+            slow: 0
+        };
+
+        // Initialize Three.js High-Fidelity Environment
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            // Scene setup with rich atmospheric sky fog
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a192f);
+            scene.fog = new THREE.FogExp2(0x0a192f, 0.012);
+
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 6.5, -8.5);
+            camera.lookAt(0, 1, 5);
+
+            // Renderer setup with tone mapping for realistic visual pop
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            container.appendChild(renderer.domElement);
+
+            // Advanced Cinematic Lighting
+            const ambientLight = new THREE.AmbientLight(0x7dd3fc, 0.8);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xfffbeb, 1.6);
+            dirLight.position.set(30, 50, -20);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 4096;
+            dirLight.shadow.mapSize.height = 4096;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 160;
+            const d = 30;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            dirLight.shadow.bias = -0.0005;
+            scene.add(dirLight);
+
+            const secondaryLight = new THREE.DirectionalLight(0x38bdf8, 0.6);
+            secondaryLight.position.set(-30, 20, 10);
+            scene.add(secondaryLight);
+
+            // Create Atmospheric Floating Particles (Fireflies / Magic Dust)
+            createAtmosphericParticles();
+
+            // Create Detailed Player Mesh
+            createPlayer();
+
+            // Build Initial World Track
+            buildTrack();
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') keys.left = true;
+                if (e.key === 'ArrowRight') keys.right = true;
+            });
+            window.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowLeft') keys.left = false;
+                if (e.key === 'ArrowRight') keys.right = false;
+            });
+
+            // Touch support for mobile/tablets
+            window.addEventListener('touchstart', (e) => {
+                if (gameState !== 'PLAYING') return;
+                const x = e.touches[0].clientX;
+                if (x < window.innerWidth / 2) {
+                    keys.left = true;
+                    keys.right = false;
+                } else {
+                    keys.right = true;
+                    keys.left = false;
+                }
+            });
+            window.addEventListener('touchend', () => {
+                keys.left = false;
+                keys.right = false;
+            });
+
+            // Animation Loop
+            animate();
+        }
+
+        function createAtmosphericParticles() {
+            const particleCount = 600;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 60;
+                positions[i + 1] = Math.random() * 25;
+                positions[i + 2] = Math.random() * 300 - 50;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const material = new THREE.PointsMaterial({
+                color: 0x38bdf8,
+                size: 0.25,
+                transparent: true,
+                opacity: 0.65,
+                blending: THREE.AdditiveBlending
+            });
+
+            particleSystem = new THREE.Points(geometry, material);
+            scene.add(particleSystem);
+        }
+
+        function createPlayer() {
+            player = new THREE.Group();
+
+            // Premium Blackhole Disk Platform with glowing accretion ring
+            const bhGeo = new THREE.TorusGeometry(1.25, 0.28, 24, 64);
+            const bhMat = new THREE.MeshStandardMaterial({ 
+                color: 0x050114, 
+                emissive: 0x8b5cf6, 
+                emissiveIntensity: 0.9,
+                roughness: 0.15,
+                metalness: 0.95 
+            });
+            const blackholeDisk = new THREE.Mesh(bhGeo, bhMat);
+            blackholeDisk.rotation.x = Math.PI / 2;
+            blackholeDisk.position.y = 0.1;
+            player.add(blackholeDisk);
+
+            const ringGeo = new THREE.TorusGeometry(1.55, 0.09, 24, 64);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.y = 0.12;
+            player.add(ring);
+
+            // Detailed Boy Character
+            const jacketGeo = new THREE.BoxGeometry(0.85, 1.05, 0.55);
+            const jacketMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.4 });
+            const jacket = new THREE.Mesh(jacketGeo, jacketMat);
+            jacket.position.y = 1.05;
+            jacket.castShadow = true;
+            player.add(jacket);
+
+            // Galaxy accents on jacket
+            const shirtGeo = new THREE.BoxGeometry(0.5, 0.9, 0.1);
+            const shirtMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 });
+            const shirt = new THREE.Mesh(shirtGeo, shirtMat);
+            shirt.position.set(0, 1.05, 0.26);
+            player.add(shirt);
+
+            const headGeo = new THREE.SphereGeometry(0.38, 24, 24);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.5 }); // Soft stylized tone
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.set(0, 1.78, 0);
+            head.castShadow = true;
+            player.add(head);
+
+            // Headset accessory
+            const hpGeo = new THREE.TorusGeometry(0.42, 0.07, 12, 32, Math.PI);
+            const hpMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.1 });
+            const headphone = new THREE.Mesh(hpGeo, hpMat);
+            headphone.rotation.z = Math.PI / 2;
+            headphone.position.set(0, 1.88, 0);
+            player.add(headphone);
+
+            // Shield visual indicator (hidden by default)
+            const shieldGeo = new THREE.SphereGeometry(1.7, 32, 32);
+            const shieldMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.25, wireframe: true });
+            const shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+            shieldMesh.name = 'shieldVisual';
+            shieldMesh.visible = false;
+            shieldMesh.position.y = 1.0;
+            player.add(shieldMesh);
+
+            player.position.set(0, 0, 0);
+            scene.add(player);
+        }
+
+        function buildTrack() {
+            generateTrackChunk(0, 140);
+        }
+
+        function generateTrackChunk(startTile, endTile) {
+            const tileWidth = 2;
+            const tileLength = 2;
+
+            for (let i = startTile; i <= endTile; i++) {
+                for (let lane = -1; lane <= 1; lane++) {
+                    let isSafe = true;
+                    if (i > 15) {
+                        if ((i % 17 === 0 && lane === 1) || (i % 23 === 0 && lane === -1) || (i % 41 === 0 && lane === 0)) {
+                            isSafe = false; // Blue death gap
+                        }
+                    }
+
+                    const tileGeo = new THREE.BoxGeometry(tileWidth - 0.08, 0.25, tileLength - 0.08);
+                    const tileMat = new THREE.MeshStandardMaterial({
+                        color: isSafe ? 0x10b981 : 0x2563eb,
+                        roughness: 0.6,
+                        metalness: 0.1
+                    });
+
+                    const tile = new THREE.Mesh(tileGeo, tileMat);
+                    tile.position.set(lane * tileWidth, 0, i * tileLength);
+                    tile.receiveShadow = true;
+                    scene.add(tile);
+
+                    tiles.push({ mesh: tile, safe: isSafe, z: i * tileLength, lane: lane });
+
+                    // Spawn Golden Pillars (Frequency increased by 1.3x -> ~0.039 probability)
+                    if (isSafe && i > 20 && Math.random() < 0.039) {
+                        const pillarGeo = new THREE.CylinderGeometry(0.32, 0.32, 2.8, 24);
+                        const pillarMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.9, roughness: 0.15, emissive: 0xd97706, emissiveIntensity: 0.3 });
+                        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+                        pillar.position.set(lane * tileWidth, 1.4, i * tileLength);
+                        pillar.castShadow = true;
+                        scene.add(pillar);
+                        obstacles.push({ mesh: pillar, z: i * tileLength, lane: lane });
+                    }
+                }
+
+                // Item every 100 tiles (Shield, Size-down, Slow-down)
+                if (i > 0 && i % 100 === 0) {
+                    const lanes = [-2, 0, 2];
+                    const itemLane = lanes[Math.floor(Math.random() * lanes.length)];
+                    const itemTypes = ['shield', 'shrink', 'slow'];
+                    const chosenType = itemTypes[Math.floor(Math.random() * itemTypes.length)];
+                    
+                    let itemColor = 0x38bdf8; // shield (blue)
+                    if (chosenType === 'shrink') itemColor = 0xc084fc; // purple
+                    if (chosenType === 'slow') itemColor = 0xfb923c; // orange
+
+                    const itemGeo = new THREE.OctahedronGeometry(0.55);
+                    const itemMat = new THREE.MeshStandardMaterial({ color: itemColor, emissive: itemColor, emissiveIntensity: 0.8, metalness: 0.9, roughness: 0.1 });
+                    const itemMesh = new THREE.Mesh(itemGeo, itemMat);
+                    itemMesh.position.set(itemLane, 1.1, i * tileLength);
+                    scene.add(itemMesh);
+
+                    items.push({
+                        mesh: itemMesh,
+                        type: chosenType,
+                        z: i * tileLength,
+                        x: itemLane
+                    });
+                }
+            }
+
+            lastGeneratedTile = Math.max(lastGeneratedTile, endTile);
+        }
+
+        function applyItemEffect(type) {
+            if (type === 'shield') {
+                hasShield = true;
+                const shieldVis = player.getObjectByName('shieldVisual');
+                if (shieldVis) shieldVis.visible = true;
+            } else if (type === 'shrink') {
+                effectTimers.shrink = 10.0;
+            } else if (type === 'slow') {
+                effectTimers.slow = 10.0;
+            }
+        }
+
+        function handleDamage() {
+            if (hasShield) {
+                hasShield = false;
+                const shieldVis = player.getObjectByName('shieldVisual');
+                if (shieldVis) shieldVis.visible = false;
+                return true; // absorbed
+            }
+            triggerGameOver("위험 요소에 피격되었습니다!");
+            return false; // died
+        }
+
+        function consumeShield() {
+            if (hasShield) {
+                hasShield = false;
+                const shieldVis = player.getObjectByName('shieldVisual');
+                if (shieldVis) shieldVis.visible = false;
+            } else {
+                triggerGameOver("파란 사망 구역으로 떨어졌습니다!");
+            }
+        }
+
+        function updateStatusUI() {
+            const container = document.getElementById('status-effects');
+            let html = '';
+            if (hasShield) {
+                html += `<div class="glass-panel px-3 py-1.5 rounded-xl text-xs font-bold text-sky-400 border border-sky-500/30">🛡️ 방어막 활성</div>`;
+            }
+            if (effectTimers.shrink > 0) {
+                html += `<div class="glass-panel px-3 py-1.5 rounded-xl text-xs font-bold text-purple-400 border border-purple-500/30">🪞 범위 축소 (${Math.ceil(effectTimers.shrink)}초)</div>`;
+            }
+            if (effectTimers.slow > 0) {
+                html += `<div class="glass-panel px-3 py-1.5 rounded-xl text-xs font-bold text-amber-400 border border-amber-500/30">⏳ 속도 감소 (${Math.ceil(effectTimers.slow)}초)</div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            gameState = 'PLAYING';
+            currentZ = 0;
+            playerX = 0;
+            lastTime = performance.now();
+        }
+
+        function restartGame() {
+            document.getElementById('gameover-screen').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            
+            currentZ = 0;
+            playerX = 0;
+            if (player) {
+                player.position.set(0, 0, 0);
+                player.scale.setScalar(1.0);
+            }
+            hasShield = false;
+            if (player) {
+                const shieldVis = player.getObjectByName('shieldVisual');
+                if (shieldVis) shieldVis.visible = false;
+            }
+            effectTimers.shrink = 0;
+            effectTimers.slow = 0;
+            score = 0; // Reset score on restart
+            
+            // Cleanup existing scene objects
+            activeWarnings.forEach(w => scene.remove(w.mesh));
+            activeWarnings = [];
+            lightnings.forEach(l => scene.remove(l.mesh));
+            lightnings = [];
+            items.forEach(i => scene.remove(i.mesh));
+            items = [];
+            obstacles.forEach(o => scene.remove(o.mesh));
+            obstacles = [];
+            tiles.forEach(t => scene.remove(t.mesh));
+            tiles = [];
+
+            // Rebuild initial track
+            lastGeneratedTile = 0;
+            buildTrack();
+
+            gameState = 'PLAYING';
+            lastTime = performance.now();
+        }
+
+        let lastTime = 0;
+        let lightningTimer = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const currentTime = performance.now();
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+
+            if (gameState === 'PLAYING') {
+                // Effect countdowns
+                if (effectTimers.shrink > 0) effectTimers.shrink -= deltaTime;
+                if (effectTimers.slow > 0) effectTimers.slow -= deltaTime;
+                updateStatusUI();
+
+                // Player Steering: Inverted controls (Left Arrow moves right, Right Arrow moves left)
+                if (keys.left) playerX += playerSpeedX * deltaTime;
+                if (keys.right) playerX -= playerSpeedX * deltaTime;
+
+                // Clamp within track lane bounds (-3 to 3)
+                playerX = Math.max(-3.1, Math.min(3.1, playerX));
+
+                // Effective speed with slow item
+                let currentSpeed = baseSpeed;
+                if (effectTimers.slow > 0) currentSpeed *= 0.65;
+
+                // Forward movement
+                currentZ += currentSpeed * deltaTime;
+                
+                // Update score (10 points per tile / unit progress)
+                score = Math.floor(currentZ * 5);
+                document.getElementById('score-text').innerText = score;
+                document.getElementById('progress-text').innerText = Math.floor(currentZ) + ' 칸';
+
+                // Player position update
+                player.position.x = playerX;
+                player.position.z = currentZ;
+
+                // Dynamic camera follow
+                camera.position.z = currentZ - 8.5;
+                camera.position.x = playerX * 0.4;
+                camera.lookAt(playerX * 0.2, 1, currentZ + 5);
+
+                // Rotate blackhole ring & items for visual fidelity
+                player.children[0].rotation.z += 0.05;
+
+                // Infinite Track Generation ahead
+                const currentTileIndex = Math.floor(currentZ / 2);
+                if (currentTileIndex + 80 > lastGeneratedTile) {
+                    generateTrackChunk(lastGeneratedTile + 1, lastGeneratedTile + 60);
+                }
+
+                // Cleanup passed objects behind camera
+                cleanupOldObjects(currentZ);
+
+                // Check Tile collision (Safe vs Death Blue Zone)
+                checkTileCollision();
+
+                // Check Obstacle & Item Collisions
+                checkObstacleCollisions();
+                checkItemCollisions();
+
+                // Lightning Hazard Logic (Spawn warning, then strike after 1 second, kills on impact)
+                lightningTimer += deltaTime;
+                if (lightningTimer > 2.8) {
+                    lightningTimer = 0;
+                    spawnLightningWarning();
+                }
+                updateLightnings(deltaTime);
+            }
+
+            renderer.render(scene, camera);
+            window.PaletteGameReady?.();
+        }
+
+        function cleanupOldObjects(zPos) {
+            // Remove tiles far behind
+            tiles = tiles.filter(t => {
+                if (t.z < zPos - 15) {
+                    scene.remove(t.mesh);
+                    return false;
+                }
+                return true;
+            });
+
+            obstacles = obstacles.filter(o => {
+                if (o.z < zPos - 15) {
+                    scene.remove(o.mesh);
+                    return false;
+                }
+                return true;
+            });
+
+            items = items.filter(i => {
+                if (i.z < zPos - 15) {
+                    scene.remove(i.mesh);
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function checkTileCollision() {
+            // Find current tile player is standing on
+            const playerTileZ = Math.round(currentZ / 2) * 2;
+            const currentTiles = tiles.filter(t => Math.abs(t.z - currentZ) < 1.2);
+            
+            if (currentTiles.length > 0) {
+                // Find closest tile by X position
+                let closest = currentTiles[0];
+                let minDist = Math.abs(closest.mesh.position.x - playerX);
+                for (let i = 1; i < currentTiles.length; i++) {
+                    const dist = Math.abs(currentTiles[i].mesh.position.x - playerX);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closest = currentTiles[i];
+                    }
+                }
+
+                // If standing on a blue dead tile
+                if (!closest.safe && minDist < 1.1) {
+                    consumeShield();
+                }
+            }
+        }
+
+        function checkObstacleCollisions() {
+            for (let i = 0; i < obstacles.length; i++) {
+                const obs = obstacles[i];
+                if (Math.abs(obs.z - currentZ) < 0.9) {
+                    let hitRadius = 0.7;
+                    if (effectTimers.shrink > 0) hitRadius = 0.35; // reduced hit box with shrink item
+
+                    if (Math.abs(obs.mesh.position.x - playerX) < hitRadius) {
+                        handleDamage();
+                        break;
+                    }
+                }
+            }
+        }
+
+        function checkItemCollisions() {
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                if (Math.abs(item.z - currentZ) < 1.0 && Math.abs(item.x - playerX) < 1.0) {
+                    applyItemEffect(item.type);
+                    scene.remove(item.mesh);
+                    items.splice(i, 1);
+                }
+            }
+        }
+
+        function spawnLightningWarning() {
+            if (activeWarnings.length >= 2) return; // Max 2 active lightning warnings
+
+            // Pick a target ahead between 4 to 10 tiles
+            const targetZ = currentZ + (Math.floor(Math.random() * 6) + 4) * 2;
+            const lanes = [-2, 0, 2];
+            const targetLane = lanes[Math.floor(Math.random() * lanes.length)];
+
+            // Create warning marker on ground
+            const warnGeo = new THREE.RingGeometry(0.2, 0.9, 32);
+            const warnMat = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+            const warnMesh = new THREE.Mesh(warnGeo, warnMat);
+            warnMesh.rotation.x = Math.PI / 2;
+            warnMesh.position.set(targetLane, 0.15, targetZ);
+            scene.add(warnMesh);
+
+            activeWarnings.push({
+                mesh: warnMesh,
+                z: targetZ,
+                x: targetLane,
+                timer: 0,
+                targetTime: 1.0 // Exactly 1 second warning before strike
+            });
+        }
+
+        function updateLightnings(deltaTime) {
+            // Update warnings
+            for (let i = activeWarnings.length - 1; i >= 0; i--) {
+                const w = activeWarnings[i];
+                w.timer += deltaTime;
+                
+                // Pulsing animation for warning
+                w.mesh.scale.setScalar(1 + Math.sin(w.timer * 15) * 0.15);
+
+                if (w.timer >= w.targetTime) {
+                    // Trigger actual lightning strike
+                    scene.remove(w.mesh);
+                    activeWarnings.splice(i, 1);
+                    createStrike(w.x, w.z);
+                }
+            }
+
+            // Update active lethal lightning bolts
+            for (let i = lightnings.length - 1; i >= 0; i--) {
+                const l = lightnings[i];
+                l.life -= deltaTime;
+
+                // Check collision with player instantly upon strike
+                let hitRadius = 0.85;
+                if (effectTimers.shrink > 0) hitRadius = 0.45;
+
+                if (Math.abs(l.z - currentZ) < 1.2 && Math.abs(l.x - playerX) < hitRadius) {
+                    handleDamage();
+                }
+
+                if (l.life <= 0) {
+                    scene.remove(l.mesh);
+                    lightnings.splice(i, 1);
+                }
+            }
+        }
+
+        function createStrike(x, z) {
+            const strikeGeo = new THREE.CylinderGeometry(0.1, 1.2, 20, 16);
+            const strikeMat = new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.9 });
+            const strikeMesh = new THREE.Mesh(strikeGeo, strikeMat);
+            strikeMesh.position.set(x, 10, z);
+            scene.add(strikeMesh);
+
+            lightnings.push({
+                mesh: strikeMesh,
+                z: z,
+                x: x,
+                life: 0.35 // active lethal duration
+            });
+        }
+
+        function triggerGameOver(reason) {
+            gameState = 'GAMEOVER';
+            document.getElementById('gameover-reason').innerText = reason;
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.remove('hidden');
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+Three.js r128 — Copyright © three.js authors. MIT License.
+https://github.com/mrdoob/three.js/blob/r128/LICENSE
+
+Matter.js 0.19.0 — Copyright © Liam Brummitt and contributors. MIT License.
+https://github.com/liabru/matter-js/blob/0.19.0/LICENSE
+
+Tailwind CSS 3.4.17 — Copyright © Tailwind Labs, Inc. MIT License.
+https://github.com/tailwindlabs/tailwindcss/blob/v3.4.17/LICENSE
+
+Natural Earth map data are in the public domain.
+https://www.naturalearthdata.com/about/terms-of-use/
