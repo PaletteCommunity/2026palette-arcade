@@ -31,10 +31,12 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-
 
 /* A printed arcade sign and the muted rainbow band from old CRT displays. */
 .header { position: relative; text-align: center; padding: 26px 0; }
-.header .site-title { position: relative; width: 100%; max-width: 960px; aspect-ratio: 5 / 1; overflow: hidden; margin: 0 auto; line-height: 0; }
-/* Frame the artwork inside its transparent canvas, with a slightly wider sign proportion. */
+.header .site-title { position: relative; width: 90%; max-width: 864px; aspect-ratio: 5 / 1; overflow: hidden; margin: 0 auto; line-height: 0; }
+/* Restore the compact framing of the original pixel artwork. */
 .site-title img { position: absolute; top: 50%; left: 0; display: block; width: 100%; height: auto; transform: translateY(-50%) scaleY(.9); }
 .site-intro { margin: 18px auto 0; max-width: 920px; color: #293449; font-size: 17px; font-weight: 700; line-height: 1.9; letter-spacing: -.3px; word-break: keep-all; }
+.site-intro strong { font-weight: 900; }
+.site-intro mark { background: #f4e2aa; color: inherit; font: inherit; padding: .08em .18em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 7px; border-block: 1px solid #515448; background: linear-gradient(90deg, #c07f7c 0 20%, #e4ca8f 20% 40%, #9eb39f 40% 60%, #79a5bb 60% 80%, #9d8cbb 80%); }
 .arcade { padding-block: 32px 42px; }
 .arcade-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(340px, .9fr); gap: 42px; align-items: start; }
