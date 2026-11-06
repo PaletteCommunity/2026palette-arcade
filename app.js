@@ -2,6 +2,9 @@
 const games=window.PALETTE_GAMES,byId=Object.fromEntries(games.map(g=>[g.id,g]));
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let selected=null,active=null,returnFocus=null,loadTimer=null,toastTimer=null,fatalError=false;
+function syncArcadeMotion(){document.body.classList.toggle('arcade-paused',document.hidden||!!active);}
+document.addEventListener('visibilitychange',syncArcadeMotion);
+syncArcadeMotion();
 const glowColors={seongnam:['#76c4ff','118,196,255'],gangwon:['#ffd875','255,216,117'],busan:['#63ecd5','99,236,213'],daegu:['#e08cff','224,140,255'],jeonju:['#82dffb','130,223,251']};
 function miniMachine(g){return `<svg viewBox="0 0 48 64" aria-hidden="true"><path d="M6 2h36v40l4 7v13H2V49l4-7Z" fill="${g.color}" stroke="#31475a" stroke-width="2"/><path d="M10 7h28v5H10Z" fill="${g.light}"/><rect x="9" y="17" width="30" height="23" rx="2" fill="#263b4c"/><path d="m21 22 10 7-10 6Z" fill="${g.light}"/><path d="M3 48h42" stroke="#31475a"/><path d="M12 46v-5" stroke="#31475a" stroke-width="3"/><circle cx="12" cy="41" r="3" fill="#fff" stroke="#31475a"/><circle cx="32" cy="44" r="2.5" fill="#fff"/><circle cx="39" cy="43" r="2.5" fill="#fff"/><path d="M19 53h10v4H19Z" fill="#31475a"/></svg>`;}
 // Overlapping invisible alternatives reserve the tallest wrapped text at any width.
@@ -10,9 +13,9 @@ function stableText(value,field){
  return `<span class="text-current">${esc(value)}</span>`+games.map(g=>`<span class="text-reserve" aria-hidden="true">${esc(g[field])}</span>`).join('');
 }
 function selectGame(id){
- if(selected===id)return;selected=id;const g=byId[id],f=$('#feature');f.style.setProperty('--machine',g.color);f.style.setProperty('--light',g.light);f.style.setProperty('--glow',glowColors[id][0]);f.style.setProperty('--glow-rgb',glowColors[id][1]);
+ if(selected===id)return;const switching=selected!==null;selected=id;const g=byId[id],f=$('#feature');f.style.setProperty('--machine',g.color);f.style.setProperty('--light',g.light);f.style.setProperty('--glow',glowColors[id][0]);f.style.setProperty('--glow-rgb',glowColors[id][1]);
  document.querySelectorAll('.map-marker').forEach(b=>{const on=b.dataset.id===id;b.classList.toggle('active',on);b.setAttribute('aria-current',on?'true':'false');});
- f.innerHTML=`<div class="feature-header"><p class="region">${esc(g.region)}</p><h2 class="text-slot">${stableText(g.center,'center')}</h2></div><button class="big-cabinet" type="button" aria-label="${esc(g.center)} ${esc(g.title)} 바로 플레이"><div class="machine"><div class="marquee text-slot">${stableText(g.title,'title')}</div><div class="screen-bezel"><div class="screen"><img src="${g.thumbnail}" alt="${esc(g.title)} 게임 썸네일"><div class="screen-play"><span>바로 플레이 ↗</span></div></div></div><div class="control-deck" aria-hidden="true"><span class="joystick"><i></i></span><span class="machine-buttons"><i></i><i></i></span></div><div class="machine-bottom"><span class="speaker" aria-hidden="true"></span><span class="play-label">바로 플레이 <span>↗</span></span></div></div><div class="machine-feet" aria-hidden="true"></div></button><div class="feature-copy"><p class="desc text-slot">${stableText(g.description,'description')}</p><p class="genre">${esc(g.genre)}</p></div>`;
+ f.innerHTML=`<div class="feature-header"><p class="region">${esc(g.region)}</p><h2 class="text-slot">${stableText(g.center,'center')}</h2></div><button class="big-cabinet${switching?' game-switch':''}" type="button" aria-label="${esc(g.center)} ${esc(g.title)} 바로 플레이"><div class="machine"><div class="marquee text-slot">${stableText(g.title,'title')}</div><div class="screen-bezel"><div class="screen"><img src="${g.thumbnail}" alt="${esc(g.title)} 게임 썸네일"><span class="screen-scan" aria-hidden="true"></span><span class="screen-switch" aria-hidden="true"></span><div class="screen-play"><span>바로 플레이 ↗</span></div></div></div><div class="control-deck" aria-hidden="true"><span class="joystick"><span class="joystick-stick"><i></i></span></span><span class="machine-buttons"><i></i><i></i></span></div><div class="machine-bottom"><span class="speaker" aria-hidden="true"></span><span class="play-label">바로 플레이 <span>↗</span></span></div></div><div class="machine-feet" aria-hidden="true"></div></button><div class="feature-copy"><p class="desc text-slot">${stableText(g.description,'description')}</p><p class="genre">${esc(g.genre)}</p></div>`;
  f.querySelector('button').addEventListener('click',e=>openGame(g,e.currentTarget));
 }
 for(const g of games){
@@ -35,7 +38,7 @@ function mountGame(){
 }
 function openGame(g,trigger){
  active=g;returnFocus=trigger;$('#player-title').textContent=g.title;$('#player-center').textContent=g.center;$('#controls').textContent=g.controls;
- $('#compatibility').textContent=g.note||'';$('#compatibility').hidden=!g.note;$('#player').showModal();document.body.style.overflow='hidden';mountGame();
+ $('#compatibility').textContent=g.note||'';$('#compatibility').hidden=!g.note;$('#player').showModal();syncArcadeMotion();document.body.style.overflow='hidden';mountGame();
 }
 window.addEventListener('message',e=>{
  const iframe=$('#viewport iframe');if(!active||e.source!==iframe?.contentWindow||e.data?.channel!=='palette-arcade')return;
@@ -43,7 +46,7 @@ window.addEventListener('message',e=>{
  if(e.data.type==='error'){fatalError=true;clearTimeout(loadTimer);setLoad('error','게임 실행 중 문제가 생겼어요',String(e.data.message||'게임을 다시 불러와 주세요.'));}
  if(e.data.type==='exit')$('#player').close();
 });
-$('#player').addEventListener('close',()=>{clearTimeout(loadTimer);$('#viewport iframe')?.remove();active=null;document.body.style.overflow='';if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});returnFocus?.focus();});
+$('#player').addEventListener('close',()=>{clearTimeout(loadTimer);$('#viewport iframe')?.remove();active=null;syncArcadeMotion();document.body.style.overflow='';if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});returnFocus?.focus();});
 $('#close-player').addEventListener('click',()=>$('#player').close());$('#restart').addEventListener('click',()=>{if(active)mountGame();});$('#retry').addEventListener('click',()=>{if(active)mountGame();});
 if(!document.fullscreenEnabled)$('#fullscreen').hidden=true;
 $('#fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await $('#player-shell').requestFullscreen();$('#viewport iframe')?.focus();}catch{toast('이 브라우저에서는 전체 화면을 지원하지 않아요.');}});

@@ -1,551 +1,352 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
+<meta charset="utf-8">
 <script src="../game-bridge.js?v=2"></script>
-
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>이글루 벽돌 뽑기 게임 (Igloo Block Drop)</title>
-    <link rel="stylesheet" href="../vendor/game-ui.css">
-    <script src="../vendor/matter.min.js"></script>
-    <style>
-        body {
-            font-family: 'Jua', sans-serif;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
-            touch-action: none; /* Prevent zooming and scrolling on mobile */
-        }
-        
-        #game-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* UI Overlays */
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Let clicks pass through to canvas */
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 15px;
-            box-sizing: border-box;
-            z-index: 20;
-            perspective: 1000px; /* 3D Perspective 적용 */
-        }
-
-        .pointer-events-auto {
-            pointer-events: auto;
-        }
-
-        .player-card {
-            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-            opacity: 0.7;
-            transform: perspective(1000px) rotateX(15deg) translateZ(-20px);
-            box-shadow: 0 10px 15px rgba(0,0,0,0.2), inset 0 -4px 0 rgba(0,0,0,0.1);
-            transform-style: preserve-3d;
-            border: 3px solid rgba(255,255,255,0.4);
-        }
-
-        .player-card.active {
-            opacity: 1;
-            transform: perspective(1000px) rotateX(0deg) translateZ(30px) scale(1.15);
-            box-shadow: 0 25px 50px rgba(0,0,0,0.4), inset 0 -5px 0 rgba(255,255,255,0.6);
-            border: 4px solid white;
-            z-index: 30;
-        }
-
-        /* Snowfall effect */
-        .snowflake {
-            position: absolute;
-            top: -10px;
-            background: white;
-            border-radius: 50%;
-            opacity: 0.8;
-            pointer-events: none;
-            animation: fall linear infinite;
-            z-index: 5;
-        }
-
-        @keyframes fall {
-            to { transform: translateY(100vh); }
-        }
-        
-        @keyframes spinText {
-            0% { transform: translateY(10px); opacity: 0; }
-            50% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(-10px); opacity: 0; }
-        }
-        .spinning-text {
-            animation: spinText 0.1s linear infinite;
-        }
-    </style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>벽돌탑 챌린지</title>
+<style>
+:root {
+  --site-primary: #8b5cf6;
+  --site-secondary: #38d5df;
+  --site-background: #142333;
+  --site-on-primary: #ffffff;
+  --site-on-secondary: #102331;
+  --site-on-background: #f5f8ff;
+  --site-font-body: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --site-font-heading: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --site-heading-scale: 1;
+  --site-spacing-scale: 1;
+  --site-radius-scale: 1;
+  --site-decoration-opacity: 1;
+  color-scheme: light dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--site-font-body); background: var(--site-background); color: var(--site-on-background); }
+#app { min-height: 100vh; width: 100%; border-radius: 0; position: relative; overflow: hidden; background-color: var(--site-background); }
+.stars { position:absolute; inset:0; pointer-events:none; opacity:var(--site-decoration-opacity); background-image: radial-gradient(circle at 7% 17%,#dce6f0 0 2px,transparent 2.8px),radial-gradient(circle at 18% 43%,#dce6f0 0 2px,transparent 2.8px),radial-gradient(circle at 31% 12%,#dce6f0 0 1.5px,transparent 2.3px),radial-gradient(circle at 79% 21%,#dce6f0 0 2px,transparent 2.8px),radial-gradient(circle at 91% 36%,#dce6f0 0 2.5px,transparent 3px),radial-gradient(circle at 67% 58%,#dce6f0 0 1.5px,transparent 2.2px),radial-gradient(circle at 44% 31%,#dce6f0 0 2px,transparent 2.8px),radial-gradient(circle at 13% 75%,#dce6f0 0 2px,transparent 2.8px),radial-gradient(circle at 87% 81%,#dce6f0 0 2px,transparent 2.8px); }
+main { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:22px clamp(12px,3vw,30px) 0; min-height:100vh; display:flex; flex-direction:column; }
+.topbar { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.brand { display:flex; flex-direction:column; gap:4px; }
+.brand small { color:#9db0c4; letter-spacing:.16em; font-size:10px; font-weight:800; }
+h1 { margin:0; font-size:clamp(21px,3vw,31px); letter-spacing:-.06em; }
+.subtitle { color:#a9bacb; font-size:12px; margin-top:4px; }
+.timer { flex:none; display:flex; align-items:center; gap:7px; border-radius:30px; padding:9px 15px; background:#f2f5fb; color:#18283b; font-weight:900; box-shadow:0 4px 18px #0003; }
+.timer strong { color:#2869ee; font-size:19px; font-variant-numeric:tabular-nums; }
+.scoreboard { display:flex; gap:10px; margin-top:22px; flex-wrap:wrap; }
+.player { width:106px; min-height:95px; border:2px solid #ffffff25; border-radius:14px; padding:10px 9px 8px; text-align:center; background:#9c4d1e; box-shadow:0 7px 18px #0003; transition:.2s; position:relative; }
+.player:nth-child(2) { background:#245aa6; }
+.player:nth-child(3) { background:#c92d83; }
+.player.active { outline:3px solid #fff; transform:translateY(-3px); box-shadow:0 0 0 5px #ffffff24,0 10px 22px #0005; }
+.player.out { filter:grayscale(1); opacity:.4; }
+.player .emoji { font-size:25px; display:block; line-height:1.2; }
+.player .name { font-size:13px; font-weight:900; margin-top:3px; }
+.player .score { margin-top:5px; font-size:12px; color:#ffe9a9; font-weight:900; }
+.player .status { font-size:9px; margin-top:3px; color:#fff; opacity:.85; }
+.stage { display:flex; align-items:center; justify-content:space-between; margin:20px 2px 4px; gap:10px; }
+.stage-label { font-size:12px; color:#b6c4d2; }
+.stage-label b { color:#fff; font-size:14px; }
+.pill { border:1px solid #ffffff24; border-radius:30px; padding:7px 11px; color:#d9e5f1; font-size:11px; background:#ffffff0b; }
+.arena { flex:1; min-height:440px; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; position:relative; padding:15px 0 0; }
+.tower-wrap { width:min(100%,760px); display:flex; justify-content:center; align-items:flex-end; min-height:330px; padding:0 4px; }
+.tower { position:relative; width:100%; height:320px; display:block; }
+.row { display:contents; }
+.brick { width:clamp(17px,5.2vw,59px); height:27px; border:1.5px solid #25b9c8; background:#d8fbff; box-shadow:inset 0 0 0 1px #ffffffa8,0 2px 3px #0002; cursor:pointer; padding:0; position:absolute; margin:0; transition:background .15s,box-shadow .15s; touch-action:pan-y; }
+.brick:hover { background:#a9f3fa; z-index:2; }
+.brick:focus-visible { outline:3px solid #ffdc70; z-index:4; }
+.brick.selected { background:#ffe08a; border-color:#ffad35; box-shadow:0 0 0 3px #ffcb5a55; z-index:3; }
+.brick.gone { opacity:0; pointer-events:none; transform:scale(.2) rotate(12deg); }
+.brick.pushed { box-shadow:inset 0 0 0 1px #ffffffa8,0 3px 8px #0004; }
+.brick.chained::after { content:"⛓"; position:absolute; inset:1px; display:grid; place-items:center; color:#657a91; font-size:15px; text-shadow:0 1px white; }
+.floor { width:min(88%,760px); height:8px; background:#f4f7fb; border-radius:6px 6px 0 0; box-shadow:0 -2px 10px #fff3; }
+.action-panel { width:min(100%,510px); margin:0 auto 14px; padding:14px 16px 13px; border-radius:20px; background:#fbfcff; color:#263247; box-shadow:0 10px 35px #0006; text-align:center; border:1px solid #e5e9f2; }
+.action-panel h2 { margin:0 0 6px; font-size:17px; }
+.action-panel p { margin:0 0 11px; font-size:12px; color:#68768b; line-height:1.5; }
+.primary-btn { border:0; border-radius:28px; background:linear-gradient(100deg,#a744f4,#5e61ef); color:white; font:800 14px var(--site-font-body); padding:13px 24px; min-width:min(100%,280px); cursor:pointer; box-shadow:0 5px 12px #8356e955; }
+.primary-btn:disabled { opacity:.45; cursor:not-allowed; }
+.secondary-btn { border:1px solid #d7deea; border-radius:24px; background:#fff; color:#354258; font-weight:800; padding:10px 16px; cursor:pointer; }
+.item-result { display:none; margin:7px auto 10px; width:max-content; max-width:100%; background:#f0eaff; color:#6431b6; border-radius:20px; padding:7px 13px; font-size:12px; font-weight:900; }
+.item-result.show { display:block; }
+.item-grid { display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin:9px 0 0; }
+.item-chip { font-size:10px; color:#6a7486; background:#f0f3f8; padding:5px 8px; border-radius:20px; }
+.bottom-note { text-align:center; color:#aab8c8; font-size:10px; padding:0 0 10px; }
+.toast { position:fixed; z-index:20; left:50%; bottom:24px; transform:translate(-50%,20px); opacity:0; pointer-events:none; padding:11px 18px; border-radius:30px; background:#fff; color:#263247; font-size:13px; font-weight:900; box-shadow:0 8px 25px #0004; transition:.25s; text-align:center; width:max-content; max-width:90vw; }
+.toast.show { opacity:1; transform:translate(-50%,0); }
+.modal-backdrop { display:none; position:fixed; inset:0; background:#07111dcc; z-index:30; align-items:center; justify-content:center; padding:18px; }
+.modal-backdrop.show { display:flex; }
+.modal { background:#fff; color:#273449; width:min(100%,460px); border-radius:22px; padding:24px; box-shadow:0 20px 70px #0008; }
+.modal h2 { margin:0 0 12px; font-size:20px; }
+.modal p { font-size:13px; line-height:1.65; color:#5d6b7e; }
+.modal .winner { font-size:28px; font-weight:1000; text-align:center; margin:18px 0; color:#7043d7; }
+.modal-actions { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:18px; }
+.help { border:1px solid #ffffff30; background:#ffffff10; color:#e9f0f7; border-radius:20px; padding:8px 12px; font-size:11px; cursor:pointer; }
+@media (max-width:560px) {
+ main { padding-top:15px; }
+ .player { width:calc((100vw - 56px)/3); min-height:84px; padding:8px 5px; }
+ .scoreboard { gap:7px; margin-top:16px; }
+ .arena { min-height:390px; }
+ .tower-wrap { min-height:285px; }
+ .tower { height:285px; }
+ .row { height:23px; }
+ .brick { height:23px; width:clamp(14px,5.5vw,29px); }
+ .action-panel { margin-bottom:12px; padding:13px 12px; }
+ .subtitle { max-width:220px; }
+}
+</style>
 </head>
 <body>
-    <div id="game-container"></div>
-    
-    <div id="ui-layer">
-        <!-- Top Bar: Players & Turn Info -->
-        <div class="flex justify-between items-start w-full max-w-5xl mx-auto">
-            <div class="flex gap-2 sm:gap-4 transform-style-3d">
-                <!-- Player 1 -->
-                <div id="player-0" class="player-card bg-gradient-to-br from-orange-400 to-orange-600 text-white rounded-xl p-2 sm:p-3 flex flex-col items-center min-w-[80px] sm:min-w-[100px]">
-                    <div class="text-2xl sm:text-3xl mb-1 transform translate-z-10">🐷</div>
-                    <div class="font-bold text-sm sm:text-base drop-shadow-md">뚱뚱이</div>
-                    <div class="text-yellow-100 text-xs sm:text-sm font-bold bg-black/20 px-2 py-1 rounded mt-1 shadow-inner"><span id="score-0">0</span> 점</div>
-                </div>
-                <!-- Player 2 -->
-                <div id="player-1" class="player-card bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-xl p-2 sm:p-3 flex flex-col items-center min-w-[80px] sm:min-w-[100px]">
-                    <div class="text-2xl sm:text-3xl mb-1 transform translate-z-10">🐧</div>
-                    <div class="font-bold text-sm sm:text-base drop-shadow-md">펭펭이</div>
-                    <div class="text-yellow-100 text-xs sm:text-sm font-bold bg-black/20 px-2 py-1 rounded mt-1 shadow-inner"><span id="score-1">0</span> 점</div>
-                </div>
-                <!-- Player 3 -->
-                <div id="player-2" class="player-card bg-gradient-to-br from-pink-400 to-pink-600 text-white rounded-xl p-2 sm:p-3 flex flex-col items-center min-w-[80px] sm:min-w-[100px]">
-                    <div class="text-2xl sm:text-3xl mb-1 transform translate-z-10">💪</div>
-                    <div class="font-bold text-sm sm:text-base drop-shadow-md">근육이</div>
-                    <div class="text-yellow-100 text-xs sm:text-sm font-bold bg-black/20 px-2 py-1 rounded mt-1 shadow-inner"><span id="score-2">0</span> 점</div>
-                </div>
-            </div>
+<div id="app">
+  <div class="stars" aria-hidden="true"></div>
+  <main>
+    <header class="topbar">
+      <div class="brand"><small>BRICK TOWER BATTLE</small><h1>벽돌탑 챌린지</h1><div class="subtitle">차례마다 아이템을 뽑고, 무너지지 않게 벽돌을 빼세요!</div></div>
+      <div class="timer" aria-label="남은 시간">◴ <strong id="timer">12</strong> 초</div>
+    </header>
+    <section class="scoreboard" id="scoreboard" aria-label="플레이어 점수"></section>
+    <div class="stage"><div class="stage-label"><b id="roundTitle">ROUND 1</b> · <span id="turnText">뚱뚱이의 차례</span></div><div class="pill" id="brickCount">남은 벽돌 66개</div></div>
+    <section class="arena">
+      <div class="tower-wrap"><div class="tower" id="tower" aria-label="벽돌 피라미드"></div></div>
+      <div class="floor"></div>
+    </section>
+    <section class="action-panel">
+      <h2 id="promptTitle">아이템 룰렛을 돌려주세요!</h2>
+      <p id="promptText">차례가 된 플레이어가 룰렛을 돌린 뒤, 나온 아이템으로 벽돌을 터치하세요.</p>
+      <div class="item-result" id="itemResult"></div>
+      <button class="primary-btn" id="rollBtn">🎲 룰렛 돌리기 (Space)</button>
+      <div class="item-grid" aria-label="아이템 목록">
+        <span class="item-chip">⛓ 사슬 · 묶기</span><span class="item-chip">🪄 막대기 · 1개 파괴</span><span class="item-chip">🔨 망치 · 2개 파괴</span><span class="item-chip">💣 폭탄 · 파괴+진동</span><span class="item-chip">✋ 손 · 밀기</span>
+      </div>
+    </section>
+    <div class="bottom-note">벽돌 1개 제거 = 100점 · 1층 벽돌은 바닥에 닿아도 안전 · 2층 이상 벽돌이 바닥에 닿으면 해당 플레이어 탈락</div>
+  </main>
+  <div class="toast" id="toast"></div>
+  <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><h2 id="modalTitle">라운드 종료</h2><p id="modalText"></p><div class="winner" id="modalWinner"></div><div class="modal-actions"><button class="primary-btn" id="nextBtn">다음 대결 시작</button><button class="secondary-btn" id="closeBtn">닫기</button></div></div></div>
+</div>
+<script>
+(() => {
+  const players = [
+    { id:0, name:'뚱뚱이', emoji:'🐷', color:'#a94e1c', score:0, out:false },
+    { id:1, name:'펭펭이', emoji:'🐧', color:'#245aa6', score:0, out:false },
+    { id:2, name:'근육이', emoji:'💪', color:'#cc3285', score:0, out:false }
+  ];
+  const items = [
+    { id:'chain', name:'사슬', emoji:'⛓', desc:'선택한 벽돌과 이웃 벽돌을 사슬로 묶어요. 벽돌은 깨지지 않고 차례가 끝나요.' },
+    { id:'stick', name:'막대기', emoji:'🪄', desc:'선택한 벽돌 1개를 깨트려요.' },
+    { id:'hammer', name:'망치', emoji:'🔨', desc:'선택한 벽돌과 바로 옆 벽돌 1개, 총 2개를 깨트려요.' },
+    { id:'bomb', name:'폭탄', emoji:'💣', desc:'선택한 벽돌을 깨트리고 주변 벽돌을 진동파로 밀어요.' },
+    { id:'hand', name:'손', emoji:'✋', desc:'벽돌을 깨트리지 않고 선택한 벽돌을 옆으로 밀어요.' }
+  ];
+  const $ = id => document.getElementById(id);
+  let bricks = [], current = 0, activePlayers = [0,1,2], round = 1, selectedItem = null, phase = 'roll', timer = 12, timerId = null, gameOver = false, pendingAdvance = false;
+  let chainLinks = [];
+  const tower = $('tower');
 
-            <!-- Timer and Controls -->
-            <div class="flex flex-col items-end gap-2 sm:gap-3 pointer-events-auto transform translate-z-20">
-                <div class="bg-white/90 backdrop-blur text-gray-800 rounded-full px-4 py-2 shadow-lg text-xl sm:text-2xl font-bold flex items-center gap-2 border-2 border-blue-200">
-                    ⏱ <span id="timer-display" class="text-blue-600">15</span>초
-                </div>
-            </div>
-        </div>
-
-        <!-- Bottom Center Status Message & Roulette -->
-        <div class="w-full flex flex-col items-center pb-4 sm:pb-8 z-30 pointer-events-auto transform translate-z-20">
-            <div id="roulette-container" class="bg-white/95 backdrop-blur-sm p-4 rounded-3xl shadow-2xl text-center mb-3 w-full max-w-[320px] transform transition-transform border-4 border-purple-100">
-                <div id="weapon-display" class="text-xl sm:text-2xl font-bold text-gray-700 mb-3 h-8 flex items-center justify-center">
-                    무기를 뽑아주세요!
-                </div>
-                <button id="spin-btn" onclick="spinRoulette()" class="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform active:scale-95 text-lg w-full border-2 border-purple-300">
-                    🎲 룰렛 돌리기 (Space)
-                </button>
-            </div>
-
-            <div id="status-message" class="inline-block bg-white/90 text-gray-800 px-6 py-2 rounded-full shadow-md text-base sm:text-lg backdrop-blur-sm font-bold border-2 border-gray-100">
-                게임을 시작합니다!
-            </div>
-        </div>
-    </div>
-
-    <!-- Game Over Modal -->
-    <div id="game-over-modal" class="absolute inset-0 bg-black/70 hidden flex justify-center items-center z-50 pointer-events-auto backdrop-blur-md">
-        <div class="bg-white rounded-[2rem] p-8 max-w-sm sm:max-w-md w-[90%] text-center shadow-2xl transform transition-all scale-100 border-8 border-red-100">
-            <h1 class="text-4xl sm:text-5xl font-extrabold text-red-500 mb-4 drop-shadow-md">와르르! 💥</h1>
-            <p id="loser-text" class="text-xl sm:text-2xl text-gray-800 mb-6 font-bold leading-tight">
-                [플레이어] 님이 이글루를 무너뜨렸습니다!
-            </p>
-            <div class="bg-gray-50 rounded-2xl p-4 mb-6 border-2 border-gray-100">
-                <h3 class="text-lg sm:text-xl font-bold text-gray-700 mb-3">최종 결과</h3>
-                <ul id="final-scores" class="text-base sm:text-lg text-gray-600 space-y-2 font-bold flex flex-col gap-2">
-                    <!-- Scores injected here -->
-                </ul>
-            </div>
-            <button onclick="startGame()" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xl font-bold py-4 rounded-2xl shadow-xl transition-transform active:scale-95">
-                다시 하기 🔄
-            </button>
-        </div>
-    </div>
-
-    <script>
-        // Game State Variables
-        const players = [
-            { name: '뚱뚱이', icon: '🐷', color: 'orange', score: 0, hiddenScore: 0 },
-            { name: '펭펭이', icon: '🐧', color: 'blue', score: 0, hiddenScore: 0 },
-            { name: '근육이', icon: '💪', color: 'pink', score: 0, hiddenScore: 0 }
-        ];
-        
-        const weapons = ['장난감 망치 🔨', '얼음 송곳 🗡️', '맨손 ✋', '집게 🥢'];
-        let currentWeapon = null;
-        let hasSpun = false;
-        let isSpinning = false;
-        let lastPlayerIndex = 0; 
-        let currentPlayerIndex = 0;
-        let timer = 15;
-        let timerInterval = null;
-        let isGameActive = false;
-        let blocksRemoved = 0;
-
-        // Spacebar input for Roulette
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                e.preventDefault(); // 스페이스바로 화면 내려가는 것 방지
-                if (!isSpinning && !hasSpun && isGameActive) {
-                    spinRoulette();
-                }
-            }
-        });
-        
-        // Matter.js Aliases
-        const Engine = Matter.Engine,
-              Render = Matter.Render,
-              Runner = Matter.Runner,
-              Bodies = Matter.Bodies,
-              Composite = Matter.Composite,
-              Events = Matter.Events,
-              Query = Matter.Query,
-              Mouse = Matter.Mouse,
-              MouseConstraint = Matter.MouseConstraint;
-
-        let engine, render, runner, world;
-        let blocks = [];
-        let groundLevel = 0;
-        let ground;
-
-        // Snow effect generator
-        function createSnowflakes() {
-            const body = document.body;
-            for(let i=0; i<40; i++) {
-                let flake = document.createElement('div');
-                flake.className = 'snowflake';
-                let size = Math.random() * 6 + 2;
-                flake.style.width = size + 'px';
-                flake.style.height = size + 'px';
-                flake.style.left = Math.random() * 100 + 'vw';
-                flake.style.animationDuration = (Math.random() * 4 + 3) + 's';
-                flake.style.animationDelay = Math.random() * 5 + 's';
-                body.appendChild(flake);
-            }
+  function makeTower() {
+    bricks = []; chainLinks = [];
+    const rows = 11;
+    for (let r=1; r<=rows; r++) {
+      // row 0 is the single-brick peak; row 10 is the 11-brick base.
+      const row = r-1;
+      for (let c=0; c<r; c++) {
+        bricks.push({ id:`${r}-${c}`, row, col:c, alive:true, chained:false, pushed:false, vx:0, vy:0, angle:0, va:0 });
+      }
+    }
+    renderTower(); updateCounts();
+  }
+  function renderScores() {
+    $('scoreboard').innerHTML = players.map(p => `
+      <div class="player ${p.id===current && activePlayers.includes(p.id) ? 'active':''} ${p.out?'out':''}">
+        <span class="emoji">${p.emoji}</span><div class="name">${p.name}</div><div class="score">${p.score.toLocaleString()} 점</div><div class="status">${p.out?'탈락':p.id===current?'현재 차례':'대기 중'}</div>
+      </div>`).join('');
+    $('turnText').textContent = players[current].name + '의 차례';
+    $('roundTitle').textContent = `ROUND ${round}`;
+  }
+  function renderTower() {
+    tower.innerHTML='';
+    const width=tower.clientWidth || 700, height=tower.clientHeight || 320;
+    const brickW=Math.min(59,Math.max(17,Math.min(width/13,window.innerWidth<560?window.innerWidth*.055:width*.052)));
+    const brickH=window.innerWidth<560?23:27, gap=1, pitch=brickW+gap;
+    const baseWidth=11*brickW+10*gap, left=(width-baseWidth)/2;
+    bricks.forEach(b=>{
+      if(b.px===undefined){
+        // Build a centered pyramid: one block at the top, eleven along the floor.
+        b.px=left+(10-b.row)*pitch/2+b.col*pitch;
+        // row 0 (one brick) belongs at the top; row 10 (eleven bricks) sits on the floor.
+        b.py=height-brickH-(10-b.row)*brickH;
+      }
+      const btn=document.createElement('button');
+      btn.className='brick'+(!b.alive?' gone':'')+(b.chained?' chained':'')+(b.pushed?' pushed':'');
+      btn.type='button'; btn.dataset.id=b.id; btn.setAttribute('aria-label',`벽돌 ${b.id}`);
+      btn.style.width=`${brickW}px`; btn.style.height=`${brickH}px`;
+      btn.style.left=`${b.px}px`; btn.style.top=`${b.py}px`;
+      btn.style.transform=`rotate(${b.angle||0}deg)`;
+      if(b.alive && phase==='choose' && activePlayers.includes(current)) btn.addEventListener('click',()=>chooseBrick(b.id));
+      tower.appendChild(btn);
+    });
+    // Overlay chains as small labels between linked bricks.
+    chainLinks.forEach(link=>{
+      const a=bricks.find(b=>b.id===link[0]), b=bricks.find(x=>x.id===link[1]);
+      if(a?.alive && b?.alive) { const node=document.querySelector(`[data-id="${a.id}"]`); if(node) node.classList.add('chained'); }
+    });
+  }
+  function updateCounts(){ $('brickCount').textContent=`남은 벽돌 ${bricks.filter(b=>b.alive).length}개`; }
+  function setPanel(title, text, button, disabled=false){ $('promptTitle').textContent=title; $('promptText').textContent=text; $('rollBtn').textContent=button; $('rollBtn').disabled=disabled; }
+  function stopTimer(){ if(timerId) clearInterval(timerId); timerId=null; }
+  function startTimer(){ stopTimer(); timer=12; $('timer').textContent=timer; timerId=setInterval(()=>{ if(gameOver)return; timer--; $('timer').textContent=timer; if(timer<=0){ stopTimer(); showToast('시간 초과! 아이템을 자동으로 뽑습니다.'); if(phase==='roll') rollItem(); else if(phase==='choose'){ const available=bricks.filter(b=>b.alive); if(available.length) chooseBrick(available[Math.floor(Math.random()*available.length)].id); } } },1000); }
+  function rollItem(){ if(phase!=='roll'||gameOver)return; selectedItem=items[Math.floor(Math.random()*items.length)]; phase='choose'; stopTimer(); $('itemResult').textContent=`${selectedItem.emoji} ${selectedItem.name} 아이템 획득!`; $('itemResult').classList.add('show'); setPanel(`${selectedItem.emoji} ${selectedItem.name} 아이템!`,selectedItem.desc,'벽돌을 선택하세요',true); $('rollBtn').disabled=true; renderTower(); startTimer(); }
+  function showToast(message){ const t=$('toast'); t.textContent=message; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2100); }
+  function linkedGroup(target){
+    const ids=new Set([target.id]);
+    let changed=true;
+    while(changed){ changed=false; chainLinks.forEach(([a,b])=>{ if(ids.has(a)&&!ids.has(b)){ids.add(b);changed=true;} if(ids.has(b)&&!ids.has(a)){ids.add(a);changed=true;} }); }
+    return bricks.filter(b=>ids.has(b.id)&&b.alive);
+  }
+  function breakBrick(target){
+    const group=linkedGroup(target); group.forEach(b=>b.alive=false); return group.length;
+  }
+  function moveLinked(target,impulseX,impulseY=0,spin=0){
+      linkedGroup(target).forEach(b=>{b.vx+=impulseX;b.vy+=impulseY;b.va=(b.va||0)+spin;b.pushed=true;});
+  }
+  function chooseBrick(id){ if(phase!=='choose'||gameOver)return; const target=bricks.find(b=>b.id===id); if(!target||!target.alive)return; stopTimer();
+    let removed=0;
+    if(selectedItem.id==='chain'){
+      const neighbor=bricks.filter(b=>b.alive&&b.id!==id&&Math.abs(b.row-target.row)<=1&&Math.abs(b.px-target.px)<brickWidth()*1.6).sort((a,b)=>Math.abs(a.px-target.px)+Math.abs(a.py-target.py)-(Math.abs(b.px-target.px)+Math.abs(b.py-target.py)))[0];
+      if(neighbor){ target.chainDx=neighbor.px-target.px; target.chainDy=neighbor.py-target.py; chainLinks.push([target.id,neighbor.id]); target.chained=true; neighbor.chained=true; }
+      showToast(neighbor?`⛓ ${target.id} 벽돌과 이웃 벽돌을 연결했어요!`:'⛓ 사슬을 걸었어요!');
+    } else if(selectedItem.id==='stick'){
+      removed=breakBrick(target);
+    } else if(selectedItem.id==='hammer'){
+      removed=breakBrick(target);
+      const adjacent=bricks.filter(b=>b.alive&&b.id!==id&&b.row===target.row).sort((a,b)=>Math.abs(a.col-target.col)-Math.abs(b.col-target.col))[0];
+      if(adjacent) removed+=breakBrick(adjacent);
+    } else if(selectedItem.id==='bomb'){
+      removed=breakBrick(target);
+      bricks.filter(b=>b.alive&&Math.abs(b.px-target.px)<150&&Math.abs(b.py-target.py)<95).forEach(b=>{const dir=(b.px>=target.px?1:-1); b.vx+=dir*(90+Math.random()*90); b.vy-=35; b.va+=(Math.random()-.5)*1.8; b.pushed=true;});
+      showToast('💣 폭발! 주변 벽돌이 흔들렸어요.');
+    } else if(selectedItem.id==='hand'){
+      const dir=Math.random()>.5?1:-1; moveLinked(target,dir*113.1,0,dir*.08775);
+      showToast('✋ 벽돌이 미끄러지기 시작했어요!');
+    }
+    if(removed){ players[current].score+=removed*100; showToast(`${removed}개 제거! +${removed*100}점`); }
+    renderScores(); updateCounts(); renderTower();
+    phase='settling';
+    runPhysics(()=>{ updateCounts(); renderTower(); if(bricks.some(b=>b.alive&&b.row<10&&b.py>=tower.clientHeight-(window.innerWidth<560?23:27)-1)){ handleCollapse(current); return; }
+      // A short, fully frozen beat separates one player's move from the next turn.
+      phase='pause'; setPanel('잠시 정지!',`${players[current].name}의 차례가 끝났어요. 다음 플레이어를 준비하고 있어요.`,'다음 차례 준비 중',true);
+      setTimeout(()=>{if(!gameOver)advanceTurn();},1100);
+    });
+  }
+  function runPhysics(done){
+    // Small fixed substeps + iterative rigid-body contacts keep blocks from tunnelling
+    // through one another. All blocks, including the bottom row, can slide; the floor is fixed.
+    const gravity=1500, brickH=window.innerWidth<560?23:27, brickW=brickWidth();
+    let elapsed=0,last=performance.now(),settledFrames=0,accumulator=0;
+    const fixed=1/120, restitution=.035, friction=.84;
+    function solve(dt){
+      const alive=bricks.filter(b=>b.alive);
+      for(const b of alive){
+        b.vy+=gravity*dt; b.px+=b.vx*dt; b.py+=b.vy*dt;
+        b.angle=(b.angle||0)+(b.va||0)*dt;
+        b.vx*=Math.pow(.986,dt*60); b.va*=Math.pow(.90,dt*60);
+      }
+      // Several solver passes distribute contact forces through a stack naturally.
+      for(let pass=0;pass<7;pass++){
+        for(const b of alive){
+          const floorY=tower.clientHeight-brickH;
+          if(b.py>floorY){
+            b.py=floorY;
+            if(b.vy>0)b.vy=-b.vy*restitution;
+            if(Math.abs(b.vy)<22)b.vy=0;
+            b.vx*=friction;
+          }
+          if(b.px<0){b.px=0;if(b.vx<0)b.vx=-b.vx*.12;}
+          if(b.px>tower.clientWidth-brickW){b.px=tower.clientWidth-brickW;if(b.vx>0)b.vx=-b.vx*.12;}
         }
-        createSnowflakes();
-
-        function initMatterJS() {
-            if (engine) {
-                Engine.clear(engine);
-                Render.stop(render);
-                Runner.stop(runner);
-                render.canvas.remove();
-            }
-
-            engine = Engine.create();
-            world = engine.world;
-            
-            // Render setup to fit window
-            render = Render.create({
-                element: document.getElementById('game-container'),
-                engine: engine,
-                options: {
-                    width: window.innerWidth,
-                    height: window.innerHeight,
-                    wireframes: false,
-                    background: 'transparent',
-                    pixelRatio: window.devicePixelRatio
-                }
-            });
-            
-            groundLevel = window.innerHeight - 100;
-
-            // Ground
-            ground = Bodies.rectangle(window.innerWidth/2, groundLevel + 25, window.innerWidth * 2, 50, { 
-                isStatic: true, 
-                label: 'ground',
-                friction: 1,
-                render: { fillStyle: '#ffffff' }
-            });
-            
-            blocks = [];
-            
-            // Build stable Pyramid/Dome Igloo
-            const blockWidth = Math.min(window.innerWidth / 15, 45); // 블록 너비를 줄여 더 많이 쌓을 수 있게 변경
-            const blockHeight = 30; // 블록 높이 감소
-            const rows = 12; // 층수를 8층에서 12층으로 대폭 증가시켜 촘촘하게 만듦
-            
-            for (let row = 0; row < rows; row++) {
-                let blocksInThisRow = rows - row; // Bottom gets most, top gets 1
-                let yPos = groundLevel - (row * blockHeight) - (blockHeight / 2);
-                
-                // Center the row
-                let rowStartX = (window.innerWidth / 2) - ((blocksInThisRow * blockWidth) / 2) + (blockWidth / 2);
-
-                for (let col = 0; col < blocksInThisRow; col++) {
-                    let xPos = rowStartX + (col * blockWidth);
-                    
-                    let block = Bodies.rectangle(xPos, yPos, blockWidth - 1, blockHeight - 1, {
-                        label: 'iceBlock',
-                        density: 0.04,
-                        friction: 0.9,         // High friction for stability
-                        frictionStatic: 10,    // Hard to start sliding
-                        restitution: 0.0,      // No bounciness
-                        render: {
-                            fillStyle: '#e0f7fa',
-                            strokeStyle: '#00acc1',
-                            lineWidth: 2
-                        }
-                    });
-                    blocks.push(block);
-                }
-            }
-
-            Composite.add(world, [ground, ...blocks]);
-
-            // Real-time collapse check
-            Events.on(engine, 'afterUpdate', checkCollapse);
-
-            Render.run(render);
-            runner = Runner.create();
-            Runner.run(runner, engine);
-
-            // Add Interaction Listener manually to canvas
-            render.canvas.addEventListener('mousedown', handleInteract);
-            render.canvas.addEventListener('touchstart', handleInteract, {passive: false});
+        for(let i=0;i<alive.length;i++)for(let j=i+1;j<alive.length;j++){
+          const a=alive[i],b=alive[j];
+          const dx=(a.px+brickW/2)-(b.px+brickW/2),dy=(a.py+brickH/2)-(b.py+brickH/2);
+          const ox=brickW-Math.abs(dx),oy=brickH-Math.abs(dy);
+          if(ox<=0||oy<=0)continue;
+          // Resolve along the shallowest penetration axis, never leave overlapping rectangles.
+          if(ox<oy){
+            const sign=dx<0?-1:1,shift=ox/2+.015;
+            a.px+=sign*shift;b.px-=sign*shift;
+            const rel=(a.vx-b.vx)*sign;
+            if(rel<0){const impulse=-(1+restitution)*rel/2;a.vx+=impulse*sign;b.vx-=impulse*sign;}
+            const slide=(a.vy-b.vy)*.025;a.vy-=slide;b.vy+=slide;
+          }else{
+            const sign=dy<0?-1:1,shift=oy/2+.015;
+            a.py+=sign*shift;b.py-=sign*shift;
+            const rel=(a.vy-b.vy)*sign;
+            if(rel<0){const impulse=-(1+restitution)*rel/2;a.vy+=impulse*sign;b.vy-=impulse*sign;}
+            // Tangential friction transfers a little horizontal momentum on impact.
+            const tangent=(a.vx-b.vx)*.12;a.vx-=tangent;b.vx+=tangent;
+            if(Math.abs(a.vy)<18)a.vy=0;if(Math.abs(b.vy)<18)b.vy=0;
+          }
         }
-
-        // Keep the existing board in view when the arcade enters/exits fullscreen.
-        window.addEventListener('resize', () => {
-            if (!render || !world || !ground) return;
-            const width = window.innerWidth, height = window.innerHeight;
-            const previousWidth = render.options.width;
-            const nextGroundLevel = height - 100;
-            Composite.translate(world, {
-                x: (width - previousWidth) / 2,
-                y: nextGroundLevel - groundLevel
-            });
-            Matter.Body.scale(ground, width / previousWidth, 1);
-            groundLevel = nextGroundLevel;
-            render.options.width = width;
-            render.options.height = height;
-            render.bounds.max.x = render.bounds.min.x + width;
-            render.bounds.max.y = render.bounds.min.y + height;
-            Render.setPixelRatio(render, window.devicePixelRatio || 1);
-        });
-
-        function startGame() {
-            document.getElementById('game-over-modal').classList.add('hidden');
-            players.forEach(p => {
-                p.score = 0;
-                p.hiddenScore = 0;
-            });
-            currentPlayerIndex = 0;
-            lastPlayerIndex = 0;
-            blocksRemoved = 0;
-            isGameActive = true;
-            
-            resetTurnState();
-            initMatterJS();
-            updateUI();
-            startTimer();
-            setStatus("스페이스바를 눌러 룰렛을 돌려주세요! 🎲");
-            window.PaletteGameReady?.();
+        // Linked pairs behave as a tiny rigid cluster: preserve their spacing while moving together.
+        for(const [idA,idB] of chainLinks){
+          const a=alive.find(x=>x.id===idA),b=alive.find(x=>x.id===idB); if(!a||!b)continue;
+          const dx=(b.px-a.px),dy=(b.py-a.py),len=Math.hypot(dx,dy); if(!len)continue;
+          const desired=Math.hypot((a.chainDx??dx),(a.chainDy??dy));
+          const error=len-desired, nx=dx/len,ny=dy/len,correction=error*.35;
+          a.px+=nx*correction/2;a.py+=ny*correction/2;b.px-=nx*correction/2;b.py-=ny*correction/2;
+          const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
+          a.vx+=nx*rel*.35;a.vy+=ny*rel*.35;b.vx-=nx*rel*.35;b.vy-=ny*rel*.35;
         }
-
-        function resetTurnState() {
-            hasSpun = false;
-            currentWeapon = null;
-            isSpinning = false;
-            
-            // 룰렛 UI 다시 보이기
-            document.getElementById('roulette-container').style.display = 'block';
-            
-            document.getElementById('weapon-display').innerText = "무기를 뽑아주세요!";
-            document.getElementById('spin-btn').classList.remove('opacity-50', 'pointer-events-none');
-            document.getElementById('weapon-display').className = 'text-xl sm:text-2xl font-bold text-gray-700 mb-3 h-8 flex items-center justify-center';
-        }
-
-        function spinRoulette() {
-            if (!isGameActive || hasSpun || isSpinning) return;
-            
-            isSpinning = true;
-            clearInterval(timerInterval); // Pause timer during spin
-            
-            const display = document.getElementById('weapon-display');
-            const btn = document.getElementById('spin-btn');
-            
-            btn.classList.add('opacity-50', 'pointer-events-none');
-            display.classList.add('spinning-text');
-            
-            let spins = 0;
-            const spinInterval = setInterval(() => {
-                display.innerText = weapons[Math.floor(Math.random() * weapons.length)];
-                spins++;
-                if (spins > 15) { // Stop after ~1.5 seconds
-                    clearInterval(spinInterval);
-                    finishSpin();
-                }
-            }, 100);
-        }
-
-        function finishSpin() {
-            isSpinning = false;
-            hasSpun = true;
-            currentWeapon = weapons[Math.floor(Math.random() * weapons.length)];
-            
-            // 무기를 뽑은 후 룰렛 UI 숨기기
-            document.getElementById('roulette-container').style.display = 'none';
-            
-            setStatus(`[${currentWeapon}](으)로 얼음 블록을 터치해 뽑으세요!`);
-            startTimer(timer); 
-        }
-
-        function updateUI() {
-            players.forEach((p, idx) => {
-                const card = document.getElementById(`player-${idx}`);
-                // 게임 중에는 점수를 항상 0으로 유지 (숨김)
-                document.getElementById(`score-${idx}`).innerText = "0";
-                
-                if (idx === currentPlayerIndex) {
-                    card.classList.add('active');
-                } else {
-                    card.classList.remove('active');
-                }
-            });
-        }
-
-        function setStatus(msg) {
-            document.getElementById('status-message').innerText = msg;
-        }
-
-        function startTimer(resumeTime = 15) {
-            clearInterval(timerInterval);
-            timer = resumeTime;
-            document.getElementById('timer-display').innerText = timer;
-            
-            timerInterval = setInterval(() => {
-                if (!isGameActive || isSpinning) return;
-                
-                timer--;
-                document.getElementById('timer-display').innerText = timer;
-                
-                if (timer <= 0) {
-                    setStatus(`시간 초과! 다음 턴으로 넘어갑니다.`);
-                    lastPlayerIndex = currentPlayerIndex;
-                    nextTurn();
-                }
-            }, 1000);
-        }
-
-        function nextTurn() {
-            currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
-            resetTurnState();
-            updateUI();
-            startTimer();
-            setStatus("스페이스바를 눌러 룰렛을 돌려주세요! 🎲");
-        }
-
-        function handleInteract(e) {
-            if (!isGameActive || isSpinning) return;
-            
-            if (!hasSpun) {
-                setStatus("먼저 룰렛(스페이스바)을 돌려주세요! 🎲");
-                return;
-            }
-
-            e.preventDefault(); 
-            const rect = render.canvas.getBoundingClientRect();
-            let clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-            let clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-
-            const mousePos = {
-                x: clientX - rect.left,
-                y: clientY - rect.top
-            };
-
-            const allIceBlocks = Composite.allBodies(world).filter(b => b.label === 'iceBlock');
-            const clickedBodies = Query.point(allIceBlocks, mousePos);
-
-            if (clickedBodies.length > 0) {
-                const blockToRemove = clickedBodies[0];
-                
-                // Visual feedback
-                blockToRemove.render.fillStyle = '#ffb3b3';
-                blockToRemove.render.strokeStyle = '#ff4d4d';
-                
-                setTimeout(() => {
-                    if(!isGameActive) return;
-                    
-                    Composite.remove(world, blockToRemove);
-                    blocks = blocks.filter(b => b !== blockToRemove);
-                    blocksRemoved++;
-                    
-                    const player = players[currentPlayerIndex];
-                    player.hiddenScore += 1; // 블록 1개당 내부 성공 횟수만 1 증가 (승자 판별용)
-                    
-                    lastPlayerIndex = currentPlayerIndex; 
-                    nextTurn();
-                    setStatus(`성공! 다음 턴으로 넘어갑니다 ✨`);
-                }, 50);
-            }
-        }
-
-        function checkCollapse() {
-            if (!isGameActive || blocksRemoved === 0) return;
-
-            let fallenBlocks = 0;
-            
-            blocks.forEach(block => {
-                // If a block falls significantly below the ground level
-                if (block.position.y > groundLevel + 10) {
-                    fallenBlocks++;
-                }
-            });
-
-            // 뽑은 블록 외에 '단 1개라도' 다른 블록이 바닥으로 떨어지면 즉시 패배 (엄격한 룰 적용)
-            if (fallenBlocks >= 1) {
-                triggerGameOver();
-            }
-        }
-
-        function triggerGameOver() {
-            if(!isGameActive) return;
-            isGameActive = false;
-            clearInterval(timerInterval);
-            
-            // 붕괴를 일으킨 플레이어
-            const loser = players[lastPlayerIndex];
-            document.getElementById('loser-text').innerHTML = `${loser.icon} <b>${loser.name}</b> 님이 이글루를 무너뜨렸습니다!<br><span class="text-lg text-red-400">패배하셨습니다!</span>`;
-            
-            const scoresList = document.getElementById('final-scores');
-            scoresList.innerHTML = '';
-            
-            // 승자 계산 로직: 무너뜨린 사람을 제외하고 숨겨진 점수가 가장 높은 1명 찾기
-            const remainingPlayers = players.filter(p => p !== loser);
-            let winner = remainingPlayers[0];
-            remainingPlayers.forEach(p => {
-                if (p.hiddenScore > winner.hiddenScore) winner = p;
-            });
-            
-            // 보여주기 위해 모든 플레이어를 점수순으로 정렬
-            const sortedPlayers = [...players].sort((a, b) => b.hiddenScore - a.hiddenScore);
-            
-            sortedPlayers.forEach(p => {
-                let li = document.createElement('li');
-                if (p === loser) {
-                    li.className = "text-red-500 line-through bg-red-50 p-2 rounded-lg border border-red-200";
-                    li.innerHTML = `${p.icon} <b>${p.name}</b> : 0 점 (패배)`;
-                } else if (p === winner) {
-                    li.className = "text-yellow-700 font-extrabold text-xl bg-yellow-100 p-3 rounded-xl border-4 border-yellow-400 shadow-lg transform scale-105 my-2";
-                    li.innerHTML = `👑 <b>${p.name}</b> : 100 점 <br><span class="text-blue-600 text-lg mt-1 inline-block">🎉 100 코인 획득! 💰</span>`;
-                } else {
-                    li.className = "text-blue-600 bg-blue-50 p-2 rounded-lg border border-blue-200";
-                    li.innerHTML = `${p.icon} <b>${p.name}</b> : 0 점 (생존) <br><span class="text-gray-500 text-sm mt-1 inline-block">0 코인 획득</span>`;
-                }
-                scoresList.appendChild(li);
-            });
-
-            document.getElementById('game-over-modal').classList.remove('hidden');
-        }
-
-        // Initialize on load
-        window.onload = startGame;
-    </script>
+      }
+      for(const b of alive){
+        b.px=Math.max(0,Math.min(tower.clientWidth-brickW,b.px));
+        if(Math.abs(b.vx)<2)b.vx=0;if(Math.abs(b.vy)<3)b.vy=0;if(Math.abs(b.va||0)<.015)b.va=0;
+      }
+    }
+    function frame(now){
+      if(gameOver)return;
+      const delta=Math.min(.05,(now-last)/1000);last=now;elapsed+=delta;accumulator+=delta;
+      let steps=0;while(accumulator>=fixed&&steps<8){solve(fixed);accumulator-=fixed;steps++;}
+      const alive=bricks.filter(b=>b.alive);
+      const moving=alive.some(b=>Math.abs(b.vx)>5||Math.abs(b.vy)>8||Math.abs(b.va||0)>.04);
+      renderTower();settledFrames=moving?0:settledFrames+1;
+      if(elapsed<4.5&&settledFrames<18)requestAnimationFrame(frame);else done();
+    }
+    requestAnimationFrame(frame);
+  }
+  function brickWidth(){
+    const width=tower.clientWidth||700;
+    return Math.min(59,Math.max(17,Math.min(width/13,window.innerWidth<560?window.innerWidth*.055:width*.052)));
+  }
+  function advanceTurn(){
+    if(activePlayers.length<=1)return;
+    const idx=activePlayers.indexOf(current); current=activePlayers[(idx+1)%activePlayers.length];
+    phase='roll'; selectedItem=null; $('itemResult').classList.remove('show'); renderScores(); renderTower();
+    setPanel('아이템 룰렛을 돌려주세요!',`${players[current].name} 차례예요. 룰렛을 돌린 뒤 나온 아이템으로 벽돌을 터치하세요.`,'🎲 룰렛 돌리기 (Space)'); startTimer();
+  }
+  function handleCollapse(loserId){
+    stopTimer(); gameOver=true; phase='ended'; const loser=players[loserId]; loser.out=true; activePlayers=activePlayers.filter(id=>id!==loserId); renderScores(); renderTower();
+    if(activePlayers.length===2){
+      const survivors=activePlayers.map(id=>players[id].name).join(' · ');
+      $('modalTitle').textContent='💥 벽돌탑 붕괴!'; $('modalText').textContent=`${loser.name} 플레이어가 2층 이상의 벽돌을 바닥에 닿게 해 이번 대결에서 탈락했어요. 남은 두 플레이어는 점수를 유지한 채 새 벽돌탑으로 다시 대결합니다.`;
+      $('modalWinner').textContent=`다음 대결: ${survivors}`; $('nextBtn').textContent='2인 재대결 시작'; pendingAdvance=true;
+    } else {
+      const champion=players[activePlayers[0]];
+      $('modalTitle').textContent='🏆 최종 우승!'; $('modalText').textContent=`${loser.name} 플레이어가 마지막 붕괴를 일으켜 탈락했어요. 최종 승자가 결정됐습니다!`;
+      $('modalWinner').textContent=`${champion.emoji} ${champion.name} 우승!`;
+      $('nextBtn').textContent='처음부터 다시 하기'; pendingAdvance=false;
+    }
+    $('modalBackdrop').classList.add('show');
+  }
+  function nextRound(){ $('modalBackdrop').classList.remove('show');
+    if(pendingAdvance){ round++; makeTower(); current=activePlayers[0]; gameOver=false; phase='roll'; selectedItem=null; $('itemResult').classList.remove('show'); renderScores(); setPanel('아이템 룰렛을 돌려주세요!',`${players[current].name}부터 새 벽돌탑으로 대결을 시작해요.`,'🎲 룰렛 돌리기 (Space)'); startTimer(); }
+    else resetGame();
+  }
+  function resetGame(){ players.forEach(p=>{p.score=0;p.out=false;}); activePlayers=[0,1,2]; round=1; current=0; gameOver=false; phase='roll'; selectedItem=null; $('itemResult').classList.remove('show'); makeTower(); renderScores(); setPanel('아이템 룰렛을 돌려주세요!','차례가 된 플레이어가 룰렛을 돌린 뒤, 나온 아이템으로 벽돌을 터치하세요.','🎲 룰렛 돌리기 (Space)'); startTimer(); }
+  $('rollBtn').addEventListener('click',rollItem);
+  $('nextBtn').addEventListener('click',nextRound);
+  $('closeBtn').addEventListener('click',()=>$('modalBackdrop').classList.remove('show'));
+  document.addEventListener('keydown',e=>{ if(e.code==='Space' && !e.repeat && phase==='roll'){e.preventDefault();rollItem();} });
+  makeTower(); renderScores(); startTimer();
+  window.PaletteGameReady?.();
+})();
+</script>
 </body>
 </html>

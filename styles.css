@@ -37,7 +37,7 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-
 .site-intro { margin: 18px auto 0; max-width: 920px; color: #293449; font-size: 17px; font-weight: 700; line-height: 1.9; letter-spacing: -.3px; word-break: keep-all; }
 .site-intro strong { font-weight: 900; }
 .site-intro mark { background: #f4e2aa; color: inherit; font: inherit; padding: .08em .18em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-.header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 7px; border-block: 1px solid #515448; background: linear-gradient(90deg, #c07f7c 0 20%, #e4ca8f 20% 40%, #9eb39f 40% 60%, #79a5bb 60% 80%, #9d8cbb 80%); }
+.header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 7px; border-block: 1px solid #515448; background: repeating-linear-gradient(90deg, #c07f7c 0 10%, #e4ca8f 10% 20%, #9eb39f 20% 30%, #79a5bb 30% 40%, #9d8cbb 40% 50%); background-size: 200% 100%; pointer-events: none; }
 .arcade { padding-block: 32px 42px; }
 .arcade-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(340px, .9fr); gap: 42px; align-items: start; }
 
@@ -81,7 +81,8 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-
 .control-deck { height: 70px; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; margin-top: 13px; border-top: 2px solid #fff8df; border-bottom: 2px solid #4e5962; background: linear-gradient(#f0e2c8, #c9c5ac); box-shadow: 0 3px 0 #fff4d777; }
 .joystick { position: relative; width: 45px; height: 34px; margin-top: 6px; }
 .joystick::before { content: ""; position: absolute; bottom: 0; width: 42px; height: 12px; border: 1px solid #172333; border-radius: 50%; background: #3e4d55; }
-.joystick::after { content: ""; position: absolute; bottom: 5px; left: 16px; width: 7px; height: 22px; background: #78817f; border-left: 2px solid #e2dfc7; transform: rotate(-8deg); }
+.joystick-stick { position: absolute; inset: 0; transform-origin: 20px 29px; }
+.joystick-stick::before { content: ""; position: absolute; bottom: 5px; left: 16px; width: 7px; height: 22px; background: #78817f; border-left: 2px solid #e2dfc7; transform: rotate(-8deg); }
 .joystick i { position: absolute; top: -7px; left: 4px; z-index: 1; width: 26px; height: 26px; border: 2px solid #623b41; border-radius: 50%; background: #b85f69; box-shadow: inset 3px 3px 0 #e8aaa3, inset -3px -3px 0 #864751; }
 .machine-buttons { display: flex; gap: 13px; }
 .machine-buttons i { display: block; width: 27px; height: 27px; border: 2px solid #74603d; border-radius: 50%; background: #e8c572; box-shadow: inset 2px 2px 0 #fff0ad, 0 4px 0 #87794e; }
@@ -140,6 +141,43 @@ dialog::backdrop { background: #182337cc; backdrop-filter: blur(4px); }
 .compatibility { margin: 0; padding: 7px 12px; border: 1px solid #91a19a; background: #d8dfc8; color: #334858; font-size: 12px; line-height: 1.5; }
 .player-shell:fullscreen { height: 100dvh; width: 100vw; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Small, clipped cabinet details keep the page and its text in place. */
+.title-sheen { position: absolute; top: 50%; left: 0; width: 100%; aspect-ratio: 3 / 1; transform: translateY(-50%) scaleY(.9); pointer-events: none; -webkit-mask: url("assets/arcade-title.png?v=15") center / 100% 100% no-repeat; mask: url("assets/arcade-title.png?v=15") center / 100% 100% no-repeat; }
+.title-sheen::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 35%; opacity: 0; background: linear-gradient(110deg, transparent 20%, #fff6d5a6 50%, transparent 80%); }
+.screen-scan { position: absolute; top: -25%; left: 0; right: 0; height: 22%; z-index: 1; opacity: 0; pointer-events: none; background: linear-gradient(transparent, #fff5d52b, transparent); }
+.screen-switch { position: absolute; inset: 0; z-index: 1; opacity: 0; pointer-events: none; background: repeating-linear-gradient(0deg, transparent 0 3px, #f0e2c533 3px 4px, #1238d422 4px 7px); }
+.machine-buttons i, .play-label { transition: transform .1s steps(2, end); }
+.big-cabinet:active .machine-buttons i { transform: translateY(2px); box-shadow: inset 2px 2px 0 #fff0ad, 0 2px 0 #87794e; }
+.big-cabinet:active .machine-buttons i:last-child { transform: translateY(-4px); box-shadow: inset 2px 2px 0 #92a9f6, 0 2px 0 #273d73; }
+.big-cabinet:active .play-label { transform: translate(2px, 2px); }
+@media (prefers-reduced-motion: no-preference) {
+  .site-title { animation: title-on .48s steps(6, end) both; }
+  .title-sheen::after { animation: title-sheen 5s linear .8s infinite; }
+  .header::after { animation: palette-cycle 5s steps(5, end) infinite; }
+  .screen-scan { animation: crt-scan 7.6s linear infinite; }
+  .screen::after { animation: crt-texture 4s steps(4, end) infinite; }
+  .map-marker.active::after { animation: cabinet-led 2.6s steps(3, end) infinite; }
+  .game-switch .screen img { animation: channel-in .26s steps(5, end); }
+  .game-switch .screen-switch { animation: channel-noise .28s steps(4, end); }
+  .big-cabinet .joystick-stick { animation: joystick-attract 4s steps(4, end) .6s infinite; }
+}
+@keyframes title-on { from { opacity: .25; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes title-sheen { 0% { transform: translateX(-120%); opacity: 0; } 4% { opacity: .6; } 32% { transform: translateX(360%); opacity: .6; } 36%, 100% { transform: translateX(360%); opacity: 0; } }
+/* Two copies of the palette advance one fifth of the visible width per step. */
+@keyframes palette-cycle { from { background-position: 0% 0; } to { background-position: 100% 0; } }
+@keyframes crt-scan { 0% { transform: translateY(0); opacity: 0; } 8% { opacity: .8; } 64% { transform: translateY(590%); opacity: .8; } 66%, 100% { transform: translateY(590%); opacity: 0; } }
+@keyframes crt-texture { 0%, 100% { opacity: .7; } 50% { opacity: 1; } }
+@keyframes cabinet-led { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes channel-in { from { opacity: .45; } to { opacity: 1; } }
+@keyframes channel-noise { 0% { opacity: .6; transform: translateY(-2px); } 35% { opacity: .25; transform: translateY(2px); } 70% { opacity: .15; transform: translateY(-1px); } 100% { opacity: 0; transform: translateY(0); } }
+/* A brief invitation to play, followed by a still beat, on the selected cabinet. */
+@keyframes joystick-attract { 0%, 32%, 100% { transform: rotate(0); } 8% { transform: rotate(13deg); } 16% { transform: rotate(-9deg); } 24% { transform: rotate(5deg); } }
+/* The game iframe and loading indicator stay live while decorative motion pauses. */
+.arcade-paused .header::after,
+.arcade-paused :is(.header, .arcade) *,
+.arcade-paused :is(.header, .arcade) *::before,
+.arcade-paused :is(.header, .arcade) *::after { animation-play-state: paused !important; }
 
 @media (max-width: 1150px) {
   .wrap { width: calc(100% - 64px); }
