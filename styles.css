@@ -29,16 +29,34 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--blue); outline-
 .skip { position: fixed; top: -80px; left: 20px; padding: 14px 18px; background: var(--blue); color: #fff; z-index: 100; }
 .skip:focus { top: 12px; }
 
-/* A printed arcade sign and the muted rainbow band from old CRT displays. */
+/* A printed arcade sign with a thin cobalt divider. */
 .header { position: relative; text-align: center; padding: 26px 0; }
 .header .site-title { position: relative; width: 90%; max-width: 864px; aspect-ratio: 5 / 1; overflow: hidden; margin: 0 auto; line-height: 0; }
 /* Restore the compact framing of the original pixel artwork. */
 .site-title img { position: absolute; top: 50%; left: 0; display: block; width: 100%; height: auto; transform: translateY(-50%) scaleY(.9); }
-.site-intro { margin: 18px auto 0; max-width: 920px; color: #293449; font-size: 17px; font-weight: 700; line-height: 1.9; letter-spacing: -.3px; word-break: keep-all; }
-.site-intro strong { font-weight: 900; }
-.site-intro mark { background: #f4e2aa; color: inherit; font: inherit; padding: .08em .18em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-.header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 7px; border-block: 1px solid #515448; background: repeating-linear-gradient(90deg, #c07f7c 0 10%, #e4ca8f 10% 20%, #9eb39f 20% 30%, #79a5bb 30% 40%, #9d8cbb 40% 50%); background-size: 200% 100%; pointer-events: none; }
-.arcade { padding-block: 32px 42px; }
+/* An in-page system message, with a native collapsible title bar. */
+.site-intro { max-width: 1100px; margin: 20px auto 7px; padding: 4px; border: 1px solid #343b4b; background: #d9d9c9; box-shadow: inset 2px 2px 0 #fff8e6, inset -2px -2px 0 #8a9182, 4px 4px 0 #6f7b6b; color: var(--ink); text-align: left; letter-spacing: -.3px; word-break: keep-all; }
+.intro-titlebar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 30px; padding: 4px 6px 4px 10px; background: var(--blue); color: #fff5d9; font-size: 13px; font-weight: 800; line-height: 1.4; list-style: none; cursor: pointer; }
+.intro-titlebar::-webkit-details-marker { display: none; }
+.intro-titlebar:focus-visible { outline: 2px dotted #fff5d9; outline-offset: -4px; }
+.intro-window-toggle { position: relative; flex: none; width: 22px; height: 21px; border: 1px solid #27314d; background: #dedfce; box-shadow: inset 1px 1px 0 #fff9e6, inset -1px -1px 0 #8d9687; }
+.intro-window-toggle::before, .intro-window-toggle::after { content: ""; position: absolute; background: #293449; }
+.intro-window-toggle::before { width: 10px; height: 2px; top: 9px; left: 5px; }
+.intro-window-toggle::after { width: 2px; height: 10px; top: 5px; left: 9px; }
+.site-intro[open] .intro-window-toggle::after { display: none; }
+.intro-copy { padding: 16px 20px 15px; background: #eee6d2; }
+.site-intro p { margin: 0; }
+.intro-context { color: #414a50; font-size: 16px; font-weight: 600; line-height: 1.75; }
+.site-intro .intro-feature { margin-top: 7px; font-size: 18px; font-weight: 700; line-height: 1.7; letter-spacing: -.5px; }
+.intro-feature strong { font-weight: 900; }
+.intro-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; margin-top: 14px; }
+.site-intro .intro-invite { color: #414a50; font-size: 15px; font-weight: 600; line-height: 1.7; }
+.site-intro mark { background: #f4df9e; color: #203c9e; font: inherit; padding: .06em .13em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.intro-start { display: inline-flex; flex: none; align-items: center; justify-content: center; gap: 18px; min-height: 42px; padding: 8px 19px; border: 1px solid #263656; background: #dedfce; box-shadow: inset 2px 2px 0 #fff9e5, inset -2px -2px 0 #949b8a, 1px 1px 0 #6e786a; color: #233975; font-size: 14px; font-weight: 800; white-space: nowrap; }
+.intro-start:hover { background: #f2ecd8; }
+.intro-start:active { box-shadow: inset 2px 2px 0 #949b8a, inset -1px -1px 0 #fff9e5; }
+.header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--blue); pointer-events: none; }
+.arcade { padding-block: 32px 42px; scroll-margin-top: 16px; }
 .arcade-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(340px, .9fr); gap: 42px; align-items: start; }
 
 /* Cream beveled housing, cobalt title strip, and a muted green map display. */
@@ -154,7 +172,6 @@ dialog::backdrop { background: #182337cc; backdrop-filter: blur(4px); }
 @media (prefers-reduced-motion: no-preference) {
   .site-title { animation: title-on .48s steps(6, end) both; }
   .title-sheen::after { animation: title-sheen 5s linear .8s infinite; }
-  .header::after { animation: palette-cycle 5s steps(5, end) infinite; }
   .screen-scan { animation: crt-scan 7.6s linear infinite; }
   .screen::after { animation: crt-texture 4s steps(4, end) infinite; }
   .map-marker.active::after { animation: cabinet-led 2.6s steps(3, end) infinite; }
@@ -164,8 +181,6 @@ dialog::backdrop { background: #182337cc; backdrop-filter: blur(4px); }
 }
 @keyframes title-on { from { opacity: .25; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes title-sheen { 0% { transform: translateX(-120%); opacity: 0; } 4% { opacity: .6; } 32% { transform: translateX(360%); opacity: .6; } 36%, 100% { transform: translateX(360%); opacity: 0; } }
-/* Two copies of the palette advance one fifth of the visible width per step. */
-@keyframes palette-cycle { from { background-position: 0% 0; } to { background-position: 100% 0; } }
 @keyframes crt-scan { 0% { transform: translateY(0); opacity: 0; } 8% { opacity: .8; } 64% { transform: translateY(590%); opacity: .8; } 66%, 100% { transform: translateY(590%); opacity: 0; } }
 @keyframes crt-texture { 0%, 100% { opacity: .7; } 50% { opacity: 1; } }
 @keyframes cabinet-led { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
@@ -174,7 +189,6 @@ dialog::backdrop { background: #182337cc; backdrop-filter: blur(4px); }
 /* A brief invitation to play, followed by a still beat, on the selected cabinet. */
 @keyframes joystick-attract { 0%, 32%, 100% { transform: rotate(0); } 8% { transform: rotate(13deg); } 16% { transform: rotate(-9deg); } 24% { transform: rotate(5deg); } }
 /* The game iframe and loading indicator stay live while decorative motion pauses. */
-.arcade-paused .header::after,
 .arcade-paused :is(.header, .arcade) *,
 .arcade-paused :is(.header, .arcade) *::before,
 .arcade-paused :is(.header, .arcade) *::after { animation-play-state: paused !important; }
@@ -182,7 +196,6 @@ dialog::backdrop { background: #182337cc; backdrop-filter: blur(4px); }
 @media (max-width: 1150px) {
   .wrap { width: calc(100% - 64px); }
   .arcade-layout { grid-template-columns: minmax(0, 1.2fr) minmax(315px, .9fr); gap: 30px; }
-  .site-intro { font-size: 16px; }
   .map-column { padding: 34px 10px 12px; }
   .marker-label { padding: 7px 9px; }
   .marker-label strong { font-size: 15px; }
@@ -196,7 +209,8 @@ dialog::backdrop { background: #182337cc; backdrop-filter: blur(4px); }
 @media (max-width: 900px) {
   .wrap { width: calc(100% - 40px); }
   .header { padding-top: 24px; }
-  .site-intro { font-size: 15px; }
+  .intro-context { font-size: 15px; }
+  .site-intro .intro-feature { font-size: 17px; }
   .arcade-layout { grid-template-columns: 1fr 1fr; gap: 22px; }
   .map-column { padding: 32px 8px 11px; box-shadow: inset 2px 2px 0 #fff8e7, inset -2px -2px 0 #aaa18e, 4px 4px 0 #687567; }
   .marker-label { padding: 6px 7px; }
@@ -219,8 +233,13 @@ dialog::backdrop { background: #182337cc; backdrop-filter: blur(4px); }
 }
 @media (max-width: 640px) {
   .header { padding: 18px 0 22px; }
-  .site-intro { max-width: 400px; margin-top: 15px; padding-inline: 6px; font-size: 15px; line-height: 1.9; }
-  .site-intro br { display: none; }
+  .site-intro { max-width: 480px; margin-top: 16px; margin-bottom: 4px; }
+  .intro-copy { padding: 15px 14px; }
+  .intro-context { font-size: 15px; }
+  .site-intro .intro-feature { margin-top: 10px; font-size: 16px; }
+  .intro-bottom { align-items: flex-start; flex-direction: column; margin-top: 10px; }
+  .site-intro .intro-invite { font-size: 14px; }
+  .intro-start { align-self: flex-end; min-height: 44px; padding-inline: 18px; }
   .arcade { padding-block: 24px 32px; }
   .arcade-layout { grid-template-columns: minmax(0, 1fr); gap: 27px; }
   .map-column { width: 100%; max-width: 480px; margin-inline: auto; }
@@ -265,7 +284,6 @@ dialog::backdrop { background: #182337cc; backdrop-filter: blur(4px); }
   .map-marker[data-id=gangwon] .marker-label, .map-marker[data-id=daegu] .marker-label, .map-marker[data-id=busan] .marker-label { left: 29px; }
   .partner-logos { gap: 16px; }
   .partner-logos .palette-logo, .partner-logos .foundation-logo { height: 44.2px; }
-  .site-intro { padding: 0; font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
